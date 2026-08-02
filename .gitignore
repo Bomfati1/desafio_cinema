@@ -1,0 +1,122 @@
+# ══════════════════════════════════════════════════════
+# .NET (Cinema.Api)
+# ══════════════════════════════════════════════════════
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]pprof/
+*.nupkg
+*.vsp
+*.psess
+*.vspx
+*.sap
+
+# NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# EF Core migrations snapshot (keep migrations, ignore snapshots de bin)
+*.Migration.Designer.cs
+# ⚠️ Descomente se NÃO quiser versionar snapshots:
+# **/Migrations/*.Designer.cs
+
+# ══════════════════════════════════════════════════════
+# Angular (cinema-app)
+# ══════════════════════════════════════════════════════
+/dist
+/tmp
+/out-tsc
+/bazel-out
+/.angular/cache
+/connect.lock
+
+# ══════════════════════════════════════════════════════
+# Node
+# ══════════════════════════════════════════════════════
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# ══════════════════════════════════════════════════════
+# Environment & Secrets (NUNCA versionar)
+# ══════════════════════════════════════════════════════
+.env
+.env.local
+.env.production
+.env.*.local
+*.env
+secrets.json
+appsettings.*.local.json
+setup-dev-secrets.ps1
+
+# ══════════════════════════════════════════════════════
+# IDE & Editors
+# ══════════════════════════════════════════════════════
+.idea/
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+.history/
+
+# ══════════════════════════════════════════════════════
+# OS Files
+# ══════════════════════════════════════════════════════
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ══════════════════════════════════════════════════════
+# Logs & Coverage
+# ══════════════════════════════════════════════════════
+*.log
+/coverage
+/logs
+/test-results
+TestResults/
+
+# ══════════════════════════════════════════════════════
+# Tools
+# ══════════════════════════════════════════════════════
+[Nn]Crunch/
+_ReSharper*/
+_UpgradeReport_Files/
+Backup*/
+
+# ══════════════════════════════════════════════════════
+# Anotações pessoais (não versionar)
+# ══════════════════════════════════════════════════════
+todo*.md
+*.notes.md
