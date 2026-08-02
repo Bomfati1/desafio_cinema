@@ -14,27 +14,31 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── User Secrets (dev only) ───────────────────────────
+// Porta dinamica (Render/Docker) - escuta na porta definida pelo ambiente
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://+:{port}");
+
+// User Secrets (dev only)
 if (builder.Environment.IsDevelopment())
 {
     builder.Configuration.AddUserSecrets<Program>();
 }
 
-// ── Database (PostgreSQL + EF Core) ──────────────────
+// Database (PostgreSQL + EF Core)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ── DI: Unit of Work ──────────────────────────────
+// DI: Unit of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// ── DI: Repositories ──────────────────────────────
+// DI: Repositories
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IMovieRepository, MovieRepository>();
 builder.Services.AddScoped<IRoomRepository, RoomRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
-// ── DI: Services (SOLID) ─────────────────────────────
+// DI: Services (SOLID)
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -42,10 +46,10 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMovieService, MovieService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 
-// ── Health Checks ────────────────────────────────────
+// Health Checks
 builder.Services.AddHealthChecks();
 
-// ── Authentication (JWT) ─────────────────────────────
+// Authentication (JWT)
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
@@ -55,19 +59,19 @@ if (string.IsNullOrWhiteSpace(jwtKey))
     if (builder.Environment.IsDevelopment())
     {
         throw new InvalidOperationException(
-            "Jwt:Key não configurada. Defina em appsettings.json, User Secrets ou variável de ambiente Jwt__Key.");
+            "Jwt:Key nao configurada. Defina em appsettings.json, User Secrets ou variavel de ambiente Jwt__Key.");
     }
     throw new InvalidOperationException(
-        "Jwt:Key não configurada. Defina via variável de ambiente Jwt__Key ou User Secrets.");
+        "Jwt:Key nao configurada. Defina via variavel de ambiente Jwt__Key ou User Secrets.");
 }
 
 if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("DefaultConnection")))
 {
     if (builder.Environment.IsDevelopment())
         throw new InvalidOperationException(
-            "ConnectionStrings:DefaultConnection não configurada. Defina em appsettings.json, User Secrets ou variável de ambiente.");
+            "ConnectionStrings:DefaultConnection nao configurada. Defina em appsettings.json, User Secrets ou variavel de ambiente.");
     throw new InvalidOperationException(
-        "ConnectionStrings:DefaultConnection não configurada. Defina via variável de ambiente ConnectionStrings__DefaultConnection.");
+        "ConnectionStrings:DefaultConnection nao configurada. Defina via variavel de ambiente ConnectionStrings__DefaultConnection.");
 }
 
 builder.Services.AddAuthentication(options =>
@@ -91,16 +95,16 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// ── FluentValidation + ProblemDetails ──────────────────
+// FluentValidation + ProblemDetails
 builder.Services.AddValidatorsFromAssemblyContaining<CreateSessionValidator>();
 builder.Services.AddFluentValidationAutoValidation(cfg =>
 {
-    // Desabilita o response automático do FluentValidation
+    // Desabilita o response automatico do FluentValidation
     // para usarmos ProblemDetails padronizado
     cfg.DisableDataAnnotationsValidation = false;
 });
 
-// Unifica erros de validação no formato ProblemDetails (RFC 7807)
+// Unifica erros de validacao no formato ProblemDetails (RFC 7807)
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -108,9 +112,9 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options 
         var problemDetails = new Microsoft.AspNetCore.Mvc.ProblemDetails
         {
             Type = "https://tools.ietf.org/html/rfc7807",
-            Title = "Erro de validação",
+            Title = "Erro de validacao",
             Status = StatusCodes.Status400BadRequest,
-            Detail = "Um ou mais campos são inválidos.",
+            Detail = "Um ou mais campos sao invalidos.",
             Instance = context.HttpContext.Request.Path
         };
 
@@ -128,7 +132,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options 
     };
 });
 
-// ── Controllers & Swagger ────────────────────────────
+// Controllers & Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -137,7 +141,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "Cinema API",
         Version = "v1",
-        Description = "API de gestão de cinema com autenticação JWT. " +
+        Description = "API de gestao de cinema com autenticacao JWT. " +
                       "Use POST /api/auth/login para obter um token."
     });
 
@@ -174,12 +178,14 @@ builder.Services.AddSwaggerGen(c =>
         c.IncludeXmlComments(xmlPath);
 });
 
-// ── CORS (permitir Angular local) ────────────────────
+// CORS (origens configuraveis via env var Cors__Origins)
+var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
+                  ?? new[] { "http://localhost:4200" };
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        policy.WithOrigins(corsOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -187,33 +193,33 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ── Pipeline ─────────────────────────────────────────
+// Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseHttpsRedirection();  // HTTPS so em dev (Render gerencia TLS)
 }
 
-// ⚠️ Middleware de erro GLOBAL — captura DomainException e exceções não tratadas
+// Middleware de erro GLOBAL - captura DomainException e excecoes nao tratadas
 app.UseMiddleware<GlobalExceptionHandler>();
 
-app.UseHttpsRedirection();
 app.UseCors("AllowAngular");
 
-app.UseAuthentication();  // ⬅️ JWT auth middleware
+app.UseAuthentication();  // JWT auth middleware
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/health");  // ⬅️ Health check endpoint
+app.MapHealthChecks("/health");  // Health check endpoint
 
-// ── Auto-apply migrations + seed users on startup ──
+// Auto-apply migrations + seed users on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 
     if (db.Database.IsRelational())
-        await db.Database.MigrateAsync();         // PostgreSQL (produção)
+        await db.Database.MigrateAsync();         // PostgreSQL (producao)
     else
         await db.Database.EnsureCreatedAsync();   // InMemory (testes)
 

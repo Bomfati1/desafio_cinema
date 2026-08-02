@@ -1,0 +1,31 @@
+# Diretórios de build
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Git
+.git/
+.gitignore
+
+# Frontend (não faz parte da imagem do backend)
+../cinema-app/
+../cinema-app/node_modules/
+
+# Testes
+../Cinema.Api.Tests/
+
+# Documentação
+../README.md
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
