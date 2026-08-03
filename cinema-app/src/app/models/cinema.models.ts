@@ -7,6 +7,7 @@ export interface Movie {
   genre: string;
   durationMinutes: number;
   posterUrl: string;
+  isDeleted?: boolean;
 }
 
 export interface Room {
@@ -14,6 +15,7 @@ export interface Room {
   name: string;
   rows: number;
   columns: number;
+  isDeleted?: boolean;
 }
 
 export interface Seat {

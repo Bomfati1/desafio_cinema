@@ -31,12 +31,14 @@ public record MovieDto(
     string Description,
     string Genre,
     int DurationMinutes,
-    string PosterUrl
+    string PosterUrl,
+    bool IsDeleted = false
 );
 
 public record RoomDto(
     int Id,
     string Name,
     int Rows,
-    int Columns
+    int Columns,
+    bool IsDeleted = false
 );

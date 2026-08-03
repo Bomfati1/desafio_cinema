@@ -258,8 +258,10 @@ Dois usuários são criados automaticamente na primeira execução:
 | Listar sessões                       |  ✅   |  ✅  |   ✅    |
 | Ver detalhes/mapa de assentos        |  ✅   |  ✅  |   ✅    |
 | Fazer reserva                        |  ❌   |  ✅  |   ❌    |
-| CRUD filmes                          |  ✅   |  ❌  |   ❌    |
-| CRUD salas                           |  ✅   |  ❌  |   ❌    |
+| Criar/editar filmes                  |  ✅   |  ❌  |   ❌    |
+| Desativar/restaurar filmes           |  ✅   |  ❌  |   ❌    |
+| Criar salas                          |  ✅   |  ❌  |   ❌    |
+| Desativar/restaurar salas            |  ✅   |  ❌  |   ❌    |
 | Criar/desativar/restaurar sessões    |  ✅   |  ❌  |   ❌    |
 | Replicar sessões entre dias          |  ✅   |  ❌  |   ❌    |
 | Ver assentos com dados de reserva    |  ✅   |  ❌  |   ❌    |
@@ -421,12 +423,13 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### 🔒 Admin — Filmes (requer perfil Admin)
 
-| Método   | Rota                     | Descrição                                 |
-| -------- | ------------------------ | ----------------------------------------- |
-| `GET`    | `/api/admin/movies`      | Lista todos os filmes                     |
-| `POST`   | `/api/admin/movies`      | Cadastra novo filme                       |
-| `PUT`    | `/api/admin/movies/{id}` | Atualiza dados de um filme                |
-| `DELETE` | `/api/admin/movies/{id}` | Exclui filme e suas sessões (hard delete) |
+| Método   | Rota                       | Descrição                                                 |
+| -------- | -------------------------- | --------------------------------------------------------- |
+| `GET`    | `/api/admin/movies`        | Lista todos os filmes (inclui desativados)                |
+| `POST`   | `/api/admin/movies`        | Cadastra novo filme                                       |
+| `PUT`    | `/api/admin/movies/{id}`   | Atualiza dados de um filme                                |
+| `DELETE` | `/api/admin/movies/{id}`   | Desativa filme (soft-delete — preserva dados e sessões)   |
+| `POST`   | `/api/admin/movies/{id}/restore` | Restaura filme desativado                           |
 
 **POST /api/admin/movies**
 
@@ -446,7 +449,16 @@ Dois usuários são criados automaticamente na primeira execução:
 **DELETE /api/admin/movies/1**
 
 ```
-// Response 204 No Content
+// Response 204 No Content — filme marcado como IsDeleted=true (soft-delete)
+// Response 400 — filme já está desativado
+// Response 404 — filme não encontrado
+```
+
+**POST /api/admin/movies/1/restore**
+
+```
+// Response 204 No Content — filme restaurado
+// Response 400 — filme já está ativo
 // Response 404 — filme não encontrado
 ```
 
@@ -454,11 +466,12 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### 🔒 Admin — Salas (requer perfil Admin)
 
-| Método   | Rota                    | Descrição                                     |
-| -------- | ----------------------- | --------------------------------------------- |
-| `GET`    | `/api/admin/rooms`      | Lista todas as salas                          |
-| `POST`   | `/api/admin/rooms`      | Cria sala com geração automática de assentos  |
-| `DELETE` | `/api/admin/rooms/{id}` | Exclui sala, assentos e sessões (hard delete) |
+| Método   | Rota                      | Descrição                                                 |
+| -------- | ------------------------- | --------------------------------------------------------- |
+| `GET`    | `/api/admin/rooms`        | Lista todas as salas (inclui desativadas)                 |
+| `POST`   | `/api/admin/rooms`        | Cria sala com geração automática de assentos              |
+| `DELETE` | `/api/admin/rooms/{id}`   | Desativa sala (soft-delete — preserva dados e sessões)    |
+| `POST`   | `/api/admin/rooms/{id}/restore` | Restaura sala desativada                           |
 
 **POST /api/admin/rooms**
 
@@ -666,7 +679,7 @@ Copia todas as sessões ativas do dia de origem para o dia de destino, mantendo 
 - `Seat(RoomId, Row, Number)` — **Unique Index** (assento único por sala)
 - `User(Email)` — **Unique Index** (email único)
 - `RefreshToken(Token)` — **Unique Index**
-- Soft-delete em `Session` via coluna `IsDeleted` (sessões desativadas não aparecem para usuários)
+- Soft-delete em `Movie`, `Room` e `Session` via coluna `IsDeleted` (itens desativados não aparecem para usuários, mas dados são preservados)
 
 ---
 
@@ -676,7 +689,7 @@ A API usa **ProblemDetails (RFC 7807)** para todos os erros, com middleware glob
 
 | Código | Situação                                                  |
 | ------ | --------------------------------------------------------- |
-| `400`  | Erro de validação (campos obrigatórios, formato inválido) |
+| `400`  | Erro de validação ou recurso já está no estado desejado (ex: já desativado) |
 | `401`  | Credenciais inválidas ou token expirado                   |
 | `404`  | Recurso não encontrado (sessão, filme, sala, assento)     |
 | `409`  | Conflito — assento já ocupado ou conflito de horário      |
@@ -704,8 +717,8 @@ desafio/
 │   │   ├── AdminRoomsController.cs      #   GET, POST, DELETE /api/admin/rooms
 │   │   └── AdminSessionsController.cs   #   GET, POST, DELETE, restore, seats
 │   ├── Models/                          # Entidades de domínio
-│   │   ├── Movie.cs                     #   Filme
-│   │   ├── Room.cs                      #   Sala
+│   │   ├── Movie.cs                     #   Filme (com IsDeleted soft-delete)
+│   │   ├── Room.cs                      #   Sala (com IsDeleted soft-delete)
 │   │   ├── Seat.cs                      #   Assento (Row + Number, Label)
 │   │   ├── Session.cs                   #   Sessão (com IsDeleted soft-delete)
 │   │   ├── Reservation.cs               #   Reserva
@@ -825,4 +838,5 @@ desafio/
 - **Layout responsivo**: Em desktop, sidebar lateral de 250px; em mobile (≤768px), topbar compacta com menu hamburger que desliza como overlay
 - **Edição de filmes**: Botão ✏️ na tabela que pré-preenche o formulário para edição, com botão Cancelar para sair do modo de edição
 - **Tabelas simplificadas**: Colunas de ID removidas das tabelas de filmes, salas e sessões
+- **Soft-delete em filmes e salas**: Exclusão via botão 🗑 apenas desativa (não remove do banco). Itens desativados mostram badge "Desativado(a)" e podem ser restaurados com ↩ Restaurar. Dados de sessões e reservas são preservados.
 - **Replicação de sessões**: Botão 📋 Replicar Sessões no painel de sessões — copia todas as sessões ativas de um dia para outro, mantendo filmes, salas e horários. Sessões com conflito são puladas automaticamente.

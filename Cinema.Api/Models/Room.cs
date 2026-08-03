@@ -6,6 +6,7 @@ public class Room
     public string Name { get; set; } = string.Empty;
     public int Rows { get; set; }
     public int Columns { get; set; }
+    public bool IsDeleted { get; set; } = false; // soft-delete
 
     // Navigation
     public ICollection<Seat> Seats { get; set; } = new List<Seat>();

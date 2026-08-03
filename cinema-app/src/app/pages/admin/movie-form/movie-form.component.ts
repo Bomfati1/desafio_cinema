@@ -20,18 +20,26 @@ import { Movie } from '../../../models/cinema.models';
           <div class="table-wrapper">
             <table>
               <thead>
-                <tr><th>Título</th><th>Gênero</th><th>Duração</th><th>Poster</th><th>Ações</th></tr>
+                <tr><th>Título</th><th>Gênero</th><th>Duração</th><th>Poster</th><th>Status</th><th>Ações</th></tr>
               </thead>
               <tbody>
                 @for (movie of movies; track movie.id) {
-                  <tr>
+                  <tr [class.deleted-row]="movie.isDeleted">
                     <td><strong>{{ movie.title }}</strong></td>
                     <td>{{ movie.genre }}</td>
                     <td>{{ movie.durationMinutes }} min</td>
                     <td>@if (movie.posterUrl) { <a [href]="movie.posterUrl" target="_blank">🔗</a> } @else { — }</td>
                     <td>
+                      @if (movie.isDeleted) { <span class="badge badge-deleted">Desativado</span> }
+                      @else { <span class="badge badge-active">Ativo</span> }
+                    </td>
+                    <td>
                       <button class="btn-edit" (click)="startEdit(movie)">✏️</button>
-                      <button class="btn-danger" (click)="deleteMovie(movie)">🗑</button>
+                      @if (movie.isDeleted) {
+                        <button (click)="restoreMovie(movie)" style="padding:0.25rem 0.6rem;border:none;border-radius:6px;cursor:pointer;background:#e8f5e9;color:#2e7d32;font-weight:600">↩ Restaurar</button>
+                      } @else {
+                        <button class="btn-danger" (click)="deleteMovie(movie)">🗑</button>
+                      }
                     </td>
                   </tr>
                 }
@@ -174,19 +182,38 @@ export class MovieFormComponent implements OnInit {
 
   async deleteMovie(movie: Movie): Promise<void> {
     const ok = await this.toast.confirm({
-      title: 'Excluir filme',
-      message: `Excluir PERMANENTEMENTE "${movie.title}" e todas as suas sessões?`,
-      confirmLabel: 'Excluir'
+      title: 'Desativar filme',
+      message: `Desativar "${movie.title}"? O filme não aparecerá mais para seleção, mas suas sessões serão preservadas.`,
+      confirmLabel: 'Desativar'
     });
     if (!ok) return;
 
     this.adminService.deleteMovie(movie.id).subscribe({
       next: () => {
-        this.toast.success(`Filme "${movie.title}" excluído.`);
+        this.toast.success(`Filme "${movie.title}" desativado.`);
         this.loadMovies();
       },
       error: (err) => {
-        this.toast.error(err.error?.error || 'Erro ao excluir filme.');
+        this.toast.error(err.error?.error || 'Erro ao desativar filme.');
+      }
+    });
+  }
+
+  async restoreMovie(movie: Movie): Promise<void> {
+    const ok = await this.toast.confirm({
+      title: 'Restaurar filme',
+      message: `Restaurar "${movie.title}"? O filme voltará a ficar disponível para seleção.`,
+      confirmLabel: 'Restaurar'
+    });
+    if (!ok) return;
+
+    this.adminService.restoreMovie(movie.id).subscribe({
+      next: () => {
+        this.toast.success(`Filme "${movie.title}" restaurado.`);
+        this.loadMovies();
+      },
+      error: (err) => {
+        this.toast.error(err.error?.error || 'Erro ao restaurar filme.');
       }
     });
   }

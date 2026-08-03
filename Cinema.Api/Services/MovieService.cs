@@ -10,7 +10,8 @@ public interface IMovieService
     Task<MovieDto> CreateMovieAsync(CreateMovieRequest request);
     Task<MovieDto> UpdateMovieAsync(int movieId, CreateMovieRequest request);
     Task<List<MovieDto>> GetAllMoviesAsync();
-    Task DeleteMovieAsync(int movieId);
+    Task SoftDeleteMovieAsync(int movieId);
+    Task RestoreMovieAsync(int movieId);
 }
 
 public class MovieService : IMovieService
@@ -51,18 +52,34 @@ public class MovieService : IMovieService
 
     public async Task<List<MovieDto>> GetAllMoviesAsync()
     {
-        var movies = await _repo.GetAllAsync();
+        var movies = await _repo.GetAllAsync(includeDeleted: true);
         return movies.Select(MapToDto).ToList();
     }
 
-    public async Task DeleteMovieAsync(int movieId)
+    public async Task SoftDeleteMovieAsync(int movieId)
     {
         var movie = await _repo.GetByIdAsync(movieId)
             ?? throw new MovieNotFoundException(movieId);
 
-        await _repo.DeleteAsync(movie);
+        if (movie.IsDeleted)
+            throw new DomainException("Este filme já está desativado.", 400);
+
+        movie.IsDeleted = true;
+        await _repo.UpdateAsync(movie);
+    }
+
+    public async Task RestoreMovieAsync(int movieId)
+    {
+        var movie = await _repo.GetByIdAsync(movieId, includeDeleted: true)
+            ?? throw new MovieNotFoundException(movieId);
+
+        if (!movie.IsDeleted)
+            throw new DomainException("Este filme já está ativo.", 400);
+
+        movie.IsDeleted = false;
+        await _repo.UpdateAsync(movie);
     }
 
     private static MovieDto MapToDto(Movie m) => new(
-        m.Id, m.Title, m.Description, m.Genre, m.DurationMinutes, m.PosterUrl);
+        m.Id, m.Title, m.Description, m.Genre, m.DurationMinutes, m.PosterUrl, m.IsDeleted);
 }

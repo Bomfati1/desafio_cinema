@@ -75,21 +75,45 @@ public class AdminMoviesController : ControllerBase
     }
 
     /// <summary>
-    /// Exclui permanentemente um filme e todas as suas sessões associadas (hard delete).
+    /// Desativa um filme (soft-delete). O filme não aparece mais para seleção,
+    /// mas seus dados e sessões são preservados. Pode ser restaurado.
     /// </summary>
     /// <param name="id">ID do filme.</param>
-    /// <response code="204">Filme excluído com sucesso.</response>
+    /// <response code="204">Filme desativado com sucesso.</response>
+    /// <response code="400">Filme já está desativado.</response>
     /// <response code="401">Usuário não autenticado.</response>
     /// <response code="403">Acesso negado (requer perfil Admin).</response>
     /// <response code="404">Filme não encontrado.</response>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
-        await _movieService.DeleteMovieAsync(id);
+        await _movieService.SoftDeleteMovieAsync(id);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Restaura um filme desativado. O filme volta a ficar disponível para seleção.
+    /// </summary>
+    /// <param name="id">ID do filme.</param>
+    /// <response code="204">Filme restaurado com sucesso.</response>
+    /// <response code="400">Filme já está ativo.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Acesso negado (requer perfil Admin).</response>
+    /// <response code="404">Filme não encontrado.</response>
+    [HttpPost("{id:int}/restore")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(int id)
+    {
+        await _movieService.RestoreMovieAsync(id);
         return NoContent();
     }
 }

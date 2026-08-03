@@ -55,21 +55,45 @@ public class AdminRoomsController : ControllerBase
     }
 
     /// <summary>
-    /// Exclui permanentemente uma sala, seus assentos e todas as sessões associadas (hard delete).
+    /// Desativa uma sala (soft-delete). A sala não aparece mais para seleção,
+    /// mas seus dados e sessões são preservados. Pode ser restaurada.
     /// </summary>
     /// <param name="id">ID da sala.</param>
-    /// <response code="204">Sala excluída com sucesso.</response>
+    /// <response code="204">Sala desativada com sucesso.</response>
+    /// <response code="400">Sala já está desativada.</response>
     /// <response code="401">Usuário não autenticado.</response>
     /// <response code="403">Acesso negado (requer perfil Admin).</response>
     /// <response code="404">Sala não encontrada.</response>
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
-        await _roomService.DeleteRoomAsync(id);
+        await _roomService.SoftDeleteRoomAsync(id);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Restaura uma sala desativada. A sala volta a ficar disponível para seleção.
+    /// </summary>
+    /// <param name="id">ID da sala.</param>
+    /// <response code="204">Sala restaurada com sucesso.</response>
+    /// <response code="400">Sala já está ativa.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Acesso negado (requer perfil Admin).</response>
+    /// <response code="404">Sala não encontrada.</response>
+    [HttpPost("{id:int}/restore")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(int id)
+    {
+        await _roomService.RestoreRoomAsync(id);
         return NoContent();
     }
 }

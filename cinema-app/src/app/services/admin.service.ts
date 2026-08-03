@@ -37,6 +37,10 @@ export class AdminService {
     return this.http.delete<void>(`${this.baseUrl}/movies/${id}`);
   }
 
+  restoreMovie(id: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/movies/${id}/restore`, {});
+  }
+
   // ── Rooms ──────────────────────────────────────
   getRooms(): Observable<Room[]> {
     return this.http.get<Room[]>(`${this.baseUrl}/rooms`);
@@ -48,6 +52,10 @@ export class AdminService {
 
   deleteRoom(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/rooms/${id}`);
+  }
+
+  restoreRoom(id: number): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/rooms/${id}/restore`, {});
   }
 
   // ── Sessions ───────────────────────────────────

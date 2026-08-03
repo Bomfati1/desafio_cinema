@@ -6,11 +6,10 @@ namespace Cinema.Api.Repositories;
 
 public interface IMovieRepository
 {
-    Task<List<Movie>> GetAllAsync(CancellationToken ct = default);
-    Task<Movie?> GetByIdAsync(int id, CancellationToken ct = default);
+    Task<List<Movie>> GetAllAsync(bool includeDeleted = false, CancellationToken ct = default);
+    Task<Movie?> GetByIdAsync(int id, bool includeDeleted = false, CancellationToken ct = default);
     Task<Movie> AddAsync(Movie movie, CancellationToken ct = default);
-    Task<Movie> UpdateAsync(Movie movie, CancellationToken ct = default);
-    Task DeleteAsync(Movie movie, CancellationToken ct = default);
+    Task UpdateAsync(Movie movie, CancellationToken ct = default);
 }
 
 public class MovieRepository : IMovieRepository
@@ -19,14 +18,20 @@ public class MovieRepository : IMovieRepository
 
     public MovieRepository(AppDbContext db) => _db = db;
 
-    public async Task<List<Movie>> GetAllAsync(CancellationToken ct = default)
+    public async Task<List<Movie>> GetAllAsync(bool includeDeleted = false, CancellationToken ct = default)
     {
-        return await _db.Movies.ToListAsync(ct);
+        var query = _db.Movies.AsQueryable();
+        if (!includeDeleted)
+            query = query.Where(m => !m.IsDeleted);
+        return await query.OrderBy(m => m.Title).ToListAsync(ct);
     }
 
-    public async Task<Movie?> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<Movie?> GetByIdAsync(int id, bool includeDeleted = false, CancellationToken ct = default)
     {
-        return await _db.Movies.FindAsync([id], ct);
+        var query = _db.Movies.AsQueryable();
+        if (!includeDeleted)
+            query = query.Where(m => !m.IsDeleted);
+        return await query.FirstOrDefaultAsync(m => m.Id == id, ct);
     }
 
     public async Task<Movie> AddAsync(Movie movie, CancellationToken ct = default)
@@ -36,16 +41,8 @@ public class MovieRepository : IMovieRepository
         return movie;
     }
 
-    public async Task<Movie> UpdateAsync(Movie movie, CancellationToken ct = default)
+    public async Task UpdateAsync(Movie movie, CancellationToken ct = default)
     {
-        _db.Movies.Update(movie);
-        await _db.SaveChangesAsync(ct);
-        return movie;
-    }
-
-    public async Task DeleteAsync(Movie movie, CancellationToken ct = default)
-    {
-        _db.Movies.Remove(movie);
         await _db.SaveChangesAsync(ct);
     }
 }

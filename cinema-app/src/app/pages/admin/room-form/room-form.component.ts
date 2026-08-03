@@ -18,14 +18,24 @@ import { Room } from '../../../models/cinema.models';
         @else {
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>Nome</th><th>Fileiras</th><th>Colunas</th><th>Total</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Fileiras</th><th>Colunas</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody>
                 @for (room of rooms; track room.id) {
-                  <tr>
+                  <tr [class.deleted-row]="room.isDeleted">
                     <td><strong>{{ room.name }}</strong></td>
                     <td>{{ room.rows }}</td><td>{{ room.columns }}</td>
                     <td>{{ room.rows * room.columns }}</td>
-                    <td><button class="btn-danger" (click)="deleteRoom(room)">🗑</button></td>
+                    <td>
+                      @if (room.isDeleted) { <span class="badge badge-deleted">Desativada</span> }
+                      @else { <span class="badge badge-active">Ativa</span> }
+                    </td>
+                    <td>
+                      @if (room.isDeleted) {
+                        <button (click)="restoreRoom(room)" style="padding:0.25rem 0.6rem;border:none;border-radius:6px;cursor:pointer;background:#e8f5e9;color:#2e7d32;font-weight:600">↩ Restaurar</button>
+                      } @else {
+                        <button class="btn-danger" (click)="deleteRoom(room)">🗑</button>
+                      }
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -116,19 +126,38 @@ export class RoomFormComponent implements OnInit {
 
   async deleteRoom(room: Room): Promise<void> {
     const ok = await this.toast.confirm({
-      title: 'Excluir sala',
-      message: `Excluir PERMANENTEMENTE "${room.name}" e todos os seus assentos/sessões?`,
-      confirmLabel: 'Excluir'
+      title: 'Desativar sala',
+      message: `Desativar "${room.name}"? A sala não aparecerá mais para seleção, mas seus assentos e sessões serão preservados.`,
+      confirmLabel: 'Desativar'
     });
     if (!ok) return;
 
     this.adminService.deleteRoom(room.id).subscribe({
       next: () => {
-        this.toast.success(`Sala "${room.name}" excluída.`);
+        this.toast.success(`Sala "${room.name}" desativada.`);
         this.loadRooms();
       },
       error: (err) => {
-        this.toast.error(err.error?.error || 'Erro ao excluir sala.');
+        this.toast.error(err.error?.error || 'Erro ao desativar sala.');
+      }
+    });
+  }
+
+  async restoreRoom(room: Room): Promise<void> {
+    const ok = await this.toast.confirm({
+      title: 'Restaurar sala',
+      message: `Restaurar "${room.name}"? A sala voltará a ficar disponível para seleção.`,
+      confirmLabel: 'Restaurar'
+    });
+    if (!ok) return;
+
+    this.adminService.restoreRoom(room.id).subscribe({
+      next: () => {
+        this.toast.success(`Sala "${room.name}" restaurada.`);
+        this.loadRooms();
+      },
+      error: (err) => {
+        this.toast.error(err.error?.error || 'Erro ao restaurar sala.');
       }
     });
   }

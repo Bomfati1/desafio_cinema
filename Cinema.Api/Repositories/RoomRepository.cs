@@ -6,12 +6,12 @@ namespace Cinema.Api.Repositories;
 
 public interface IRoomRepository
 {
-    Task<List<Room>> GetAllAsync(CancellationToken ct = default);
-    Task<Room?> GetByIdAsync(int id, CancellationToken ct = default);
+    Task<List<Room>> GetAllAsync(bool includeDeleted = false, CancellationToken ct = default);
+    Task<Room?> GetByIdAsync(int id, bool includeDeleted = false, CancellationToken ct = default);
     Task<Room> AddAsync(Room room, CancellationToken ct = default);
     Task AddSeatsAsync(List<Seat> seats, CancellationToken ct = default);
     Task<List<Seat>> GetSeatsByRoomAsync(int roomId, CancellationToken ct = default);
-    Task DeleteAsync(Room room, CancellationToken ct = default);
+    Task UpdateAsync(Room room, CancellationToken ct = default);
 }
 
 public class RoomRepository : IRoomRepository
@@ -20,14 +20,20 @@ public class RoomRepository : IRoomRepository
 
     public RoomRepository(AppDbContext db) => _db = db;
 
-    public async Task<List<Room>> GetAllAsync(CancellationToken ct = default)
+    public async Task<List<Room>> GetAllAsync(bool includeDeleted = false, CancellationToken ct = default)
     {
-        return await _db.Rooms.ToListAsync(ct);
+        var query = _db.Rooms.AsQueryable();
+        if (!includeDeleted)
+            query = query.Where(r => !r.IsDeleted);
+        return await query.OrderBy(r => r.Name).ToListAsync(ct);
     }
 
-    public async Task<Room?> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<Room?> GetByIdAsync(int id, bool includeDeleted = false, CancellationToken ct = default)
     {
-        return await _db.Rooms.FindAsync([id], ct);
+        var query = _db.Rooms.AsQueryable();
+        if (!includeDeleted)
+            query = query.Where(r => !r.IsDeleted);
+        return await query.FirstOrDefaultAsync(r => r.Id == id, ct);
     }
 
     public async Task<Room> AddAsync(Room room, CancellationToken ct = default)
@@ -52,9 +58,8 @@ public class RoomRepository : IRoomRepository
             .ToListAsync(ct);
     }
 
-    public async Task DeleteAsync(Room room, CancellationToken ct = default)
+    public async Task UpdateAsync(Room room, CancellationToken ct = default)
     {
-        _db.Rooms.Remove(room);
         await _db.SaveChangesAsync(ct);
     }
 }

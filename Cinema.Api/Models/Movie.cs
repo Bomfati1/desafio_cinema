@@ -8,6 +8,7 @@ public class Movie
     public string Genre { get; set; } = string.Empty;
     public int DurationMinutes { get; set; }
     public string PosterUrl { get; set; } = string.Empty;
+    public bool IsDeleted { get; set; } = false; // soft-delete
 
     // Navigation
     public ICollection<Session> Sessions { get; set; } = new List<Session>();

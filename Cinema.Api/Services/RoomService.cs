@@ -10,7 +10,8 @@ public interface IRoomService
 {
     Task<RoomDto> CreateRoomAsync(CreateRoomRequest request);
     Task<List<RoomDto>> GetAllRoomsAsync();
-    Task DeleteRoomAsync(int roomId);
+    Task SoftDeleteRoomAsync(int roomId);
+    Task RestoreRoomAsync(int roomId);
 }
 
 public class RoomService : IRoomService
@@ -51,7 +52,7 @@ public class RoomService : IRoomService
             await _repo.AddSeatsAsync(seats);
             await transaction.CommitAsync();
 
-            return new RoomDto(room.Id, room.Name, room.Rows, room.Columns);
+            return new RoomDto(room.Id, room.Name, room.Rows, room.Columns, room.IsDeleted);
         }
         catch
         {
@@ -62,15 +63,31 @@ public class RoomService : IRoomService
 
     public async Task<List<RoomDto>> GetAllRoomsAsync()
     {
-        var rooms = await _repo.GetAllAsync();
-        return rooms.Select(r => new RoomDto(r.Id, r.Name, r.Rows, r.Columns)).ToList();
+        var rooms = await _repo.GetAllAsync(includeDeleted: true);
+        return rooms.Select(r => new RoomDto(r.Id, r.Name, r.Rows, r.Columns, r.IsDeleted)).ToList();
     }
 
-    public async Task DeleteRoomAsync(int roomId)
+    public async Task SoftDeleteRoomAsync(int roomId)
     {
         var room = await _repo.GetByIdAsync(roomId)
             ?? throw new RoomNotFoundException(roomId);
 
-        await _repo.DeleteAsync(room);
+        if (room.IsDeleted)
+            throw new DomainException("Esta sala já está desativada.", 400);
+
+        room.IsDeleted = true;
+        await _repo.UpdateAsync(room);
+    }
+
+    public async Task RestoreRoomAsync(int roomId)
+    {
+        var room = await _repo.GetByIdAsync(roomId, includeDeleted: true)
+            ?? throw new RoomNotFoundException(roomId);
+
+        if (!room.IsDeleted)
+            throw new DomainException("Esta sala já está ativa.", 400);
+
+        room.IsDeleted = false;
+        await _repo.UpdateAsync(room);
     }
 }
