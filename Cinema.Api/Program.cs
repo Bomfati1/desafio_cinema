@@ -199,7 +199,7 @@ builder.Services.AddSwaggerGen(c =>
 var rawOrigins = builder.Configuration["Cors:Origins"] ?? "http://localhost:4200";
 var corsOrigins = rawOrigins
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-    .Select(o => o.Trim('"', '[', ']', ' '))
+    .Select(o => o.Trim('"', '[', ']', ' ').TrimEnd('/'))
     .ToArray();
 
 Console.WriteLine($"[CORS] Origens configuradas: {string.Join("; ", corsOrigins)}");
