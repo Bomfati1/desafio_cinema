@@ -25,8 +25,25 @@ if (builder.Environment.IsDevelopment())
 }
 
 // Database (PostgreSQL + EF Core)
+// Monta connection string a partir de variaveis individuais (ex: Neon) se necessario
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    var pgHost = Environment.GetEnvironmentVariable("PGHOST");
+    var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+    var pgUser = Environment.GetEnvironmentVariable("PGUSER");
+    var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
+    var pgSslMode = Environment.GetEnvironmentVariable("PGSSLMODE") ?? "require";
+
+    if (!string.IsNullOrWhiteSpace(pgHost) && !string.IsNullOrWhiteSpace(pgDatabase))
+    {
+        connectionString = $"Host={pgHost};Port=5432;Database={pgDatabase};Username={pgUser};Password={pgPassword};SSL Mode={pgSslMode}";
+        builder.Configuration["ConnectionStrings:DefaultConnection"] = connectionString;
+    }
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 // DI: Unit of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
