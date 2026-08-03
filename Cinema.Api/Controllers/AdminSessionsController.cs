@@ -103,6 +103,26 @@ public class AdminSessionsController : ControllerBase
     }
 
     /// <summary>
+    /// Replica todas as sessões ativas de um dia de origem para um dia de destino,
+    /// mantendo filmes, salas e horários. Sessões com conflito de horário são puladas.
+    /// </summary>
+    /// <param name="request">SourceDate e TargetDate.</param>
+    /// <response code="200">Resultado com sessões criadas e erros de conflito.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Acesso negado (requer perfil Admin).</response>
+    [HttpPost("replicate")]
+    [ProducesResponseType(typeof(ReplicateSessionsResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ReplicateSessionsResult>> Replicate(
+        [FromBody] ReplicateSessionsRequest request)
+    {
+        var result = await _sessionService.ReplicateSessionsAsync(
+            request.SourceDate, request.TargetDate);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Restaura uma sessão desativada. Valida conflito de horário com sessões ativas.
     /// </summary>
     /// <param name="id">ID da sessão.</param>

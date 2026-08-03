@@ -11,6 +11,7 @@ public interface ISessionService
     Task<SessionDetailDto?> GetSessionDetailAsync(int sessionId);
     Task<List<AdminSeatDto>> GetAdminSessionSeatsAsync(int sessionId);
     Task<SessionAdminDto> CreateSessionAsync(CreateSessionRequest request);
+    Task<ReplicateSessionsResult> ReplicateSessionsAsync(DateTime sourceDate, DateTime targetDate);
     Task SoftDeleteSessionAsync(int sessionId);
     Task RestoreSessionAsync(int sessionId);
 }

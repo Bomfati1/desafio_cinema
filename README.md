@@ -253,15 +253,16 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### Permissões por Perfil
 
-| Ação                              | Admin | User | Público |
-| --------------------------------- | :---: | :--: | :-----: |
-| Listar sessões                    |  ✅   |  ✅  |   ✅    |
-| Ver detalhes/mapa de assentos     |  ✅   |  ✅  |   ✅    |
-| Fazer reserva                     |  ❌   |  ✅  |   ❌    |
-| CRUD filmes                       |  ✅   |  ❌  |   ❌    |
-| CRUD salas                        |  ✅   |  ❌  |   ❌    |
-| Criar/desativar/restaurar sessões |  ✅   |  ❌  |   ❌    |
-| Ver assentos com dados de reserva |  ✅   |  ❌  |   ❌    |
+| Ação                                 | Admin | User | Público |
+| ------------------------------------ | :---: | :--: | :-----: |
+| Listar sessões                       |  ✅   |  ✅  |   ✅    |
+| Ver detalhes/mapa de assentos        |  ✅   |  ✅  |   ✅    |
+| Fazer reserva                        |  ❌   |  ✅  |   ❌    |
+| CRUD filmes                          |  ✅   |  ❌  |   ❌    |
+| CRUD salas                           |  ✅   |  ❌  |   ❌    |
+| Criar/desativar/restaurar sessões    |  ✅   |  ❌  |   ❌    |
+| Replicar sessões entre dias          |  ✅   |  ❌  |   ❌    |
+| Ver assentos com dados de reserva    |  ✅   |  ❌  |   ❌    |
 
 ---
 
@@ -472,13 +473,14 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### 🔒 Admin — Sessões (requer perfil Admin)
 
-| Método   | Rota                               | Descrição                                                   |
-| -------- | ---------------------------------- | ----------------------------------------------------------- |
-| `GET`    | `/api/admin/sessions`              | Lista todas as sessões (inclui desativadas) com paginação   |
-| `GET`    | `/api/admin/sessions/{id}/seats`   | Mapa de assentos com nome do cliente e horário da reserva   |
-| `POST`   | `/api/admin/sessions`              | Cria nova sessão (valida conflito de horário na mesma sala) |
-| `DELETE` | `/api/admin/sessions/{id}`         | Desativa sessão (soft-delete)                               |
-| `POST`   | `/api/admin/sessions/{id}/restore` | Restaura sessão desativada                                  |
+| Método   | Rota                               | Descrição                                                                  |
+| -------- | ---------------------------------- | -------------------------------------------------------------------------- |
+| `GET`    | `/api/admin/sessions`              | Lista todas as sessões (inclui desativadas) com paginação                  |
+| `GET`    | `/api/admin/sessions/{id}/seats`   | Mapa de assentos com nome do cliente e horário da reserva                  |
+| `POST`   | `/api/admin/sessions`              | Cria nova sessão (valida conflito de horário na mesma sala)                |
+| `POST`   | `/api/admin/sessions/replicate`    | Replica sessões ativas de um dia para outro (mantém filmes, salas, horários) |
+| `DELETE` | `/api/admin/sessions/{id}`         | Desativa sessão (soft-delete)                                              |
+| `POST`   | `/api/admin/sessions/{id}/restore` | Restaura sessão desativada                                                 |
 
 **POST /api/admin/sessions**
 
@@ -538,6 +540,48 @@ Dois usuários são criados automaticamente na primeira execução:
 // Response 204 No Content — sessão restaurada
 // Response 409 — conflito de horário com sessão ativa na mesma sala
 // Response 404 — sessão não encontrada
+```
+
+**POST /api/admin/sessions/replicate**
+
+Copia todas as sessões ativas do dia de origem para o dia de destino, mantendo filmes, salas, horários e preços. Sessões com conflito de horário são puladas e reportadas nos erros.
+
+```json
+// Request
+{
+  "sourceDate": "2026-08-03",
+  "targetDate": "2026-08-04"
+}
+
+// Response 200
+{
+  "createdCount": 3,
+  "skippedCount": 1,
+  "createdSessions": [
+    {
+      "id": 10,
+      "movieId": 1,
+      "roomId": 1,
+      "startTime": "2026-08-04T14:00:00Z",
+      "endTime": "2026-08-04T17:00:00Z",
+      "ticketPrice": 35.00,
+      "movie": { "id": 1, "title": "Oppenheimer", "genre": "Drama/Biografia", "durationMinutes": 180, "posterUrl": "..." },
+      "room": { "id": 1, "name": "Sala 1", "rows": 5, "columns": 4 },
+      "isDeleted": false
+    }
+  ],
+  "errors": [
+    "Oppenheimer na Sala 1 (19:00-22:00): Conflito de horário: já existe uma sessão nesta sala durante o período informado."
+  ]
+}
+
+// Response 200 — sem sessões no dia de origem
+{
+  "createdCount": 0,
+  "skippedCount": 0,
+  "createdSessions": [],
+  "errors": []
+}
 ```
 
 ---
@@ -674,6 +718,7 @@ desafio/
 │   │   ├── SessionDto.cs / SessionDetailDto.cs / SeatDto.cs / AdminSeatDto.cs
 │   │   ├── CreateReservationRequest.cs / ReservationResponse.cs
 │   │   ├── CreateMovieRequest.cs / CreateRoomRequest.cs / CreateSessionRequest.cs
+│   │   ├── ReplicateSessionsRequest.cs / ReplicateSessionsResult.cs
 │   │   └── MovieDto.cs / RoomDto.cs
 │   ├── Services/                        # Lógica de negócio (SOLID)
 │   │   ├── IAuthService.cs / AuthService.cs
@@ -780,3 +825,4 @@ desafio/
 - **Layout responsivo**: Em desktop, sidebar lateral de 250px; em mobile (≤768px), topbar compacta com menu hamburger que desliza como overlay
 - **Edição de filmes**: Botão ✏️ na tabela que pré-preenche o formulário para edição, com botão Cancelar para sair do modo de edição
 - **Tabelas simplificadas**: Colunas de ID removidas das tabelas de filmes, salas e sessões
+- **Replicação de sessões**: Botão 📋 Replicar Sessões no painel de sessões — copia todas as sessões ativas de um dia para outro, mantendo filmes, salas e horários. Sessões com conflito são puladas automaticamente.

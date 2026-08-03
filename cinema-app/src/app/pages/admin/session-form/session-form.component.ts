@@ -14,7 +14,10 @@ import { Movie, Room, Session } from '../../../models/cinema.models';
   template: `
     <div class="page-container">
       <section class="section-card">
-        <h2>📅 Sessões Agendadas</h2>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem">
+          <h2 style="margin:0">📅 Sessões Agendadas</h2>
+          <button class="btn-replicate" (click)="openReplicateModal()">📋 Replicar Sessões</button>
+        </div>
         <div class="filter-bar" style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap">
           <label for="fDate" style="margin:0">Filtrar por data:</label>
           <input id="fDate" type="date" [ngModel]="filterDate" (ngModelChange)="onFilterChange($event)"
@@ -114,6 +117,42 @@ import { Movie, Room, Session } from '../../../models/cinema.models';
           </button>
         </form>
       </section>
+
+      <!-- ── Modal de Replicação ───────────────────── -->
+      @if (showReplicateModal) {
+        <div class="modal-backdrop" (click)="closeReplicateModal()">
+          <div class="modal-dialog" (click)="$event.stopPropagation()">
+            <h2>📋 Replicar Sessões</h2>
+            <p class="modal-desc">Copia todas as sessões ativas de um dia para outro, mantendo filmes, salas e horários.</p>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="repSource">Dia de origem</label>
+                <input id="repSource" type="date" [(ngModel)]="replicateSourceDate" />
+              </div>
+              <div class="form-group">
+                <label for="repTarget">Dia de destino *</label>
+                <input id="repTarget" type="date" [(ngModel)]="replicateTargetDate" />
+              </div>
+            </div>
+
+            @if (replicateError) {
+              <p class="status-error">{{ replicateError }}</p>
+            }
+            @if (replicateSuccess) {
+              <p class="status-success">{{ replicateSuccess }}</p>
+            }
+
+            <div class="modal-actions">
+              <button class="btn-secondary" (click)="closeReplicateModal()" [disabled]="replicating">Cancelar</button>
+              <button class="btn-primary" (click)="onReplicateSubmit()"
+                [disabled]="!replicateTargetDate || replicating">
+                {{ replicating ? 'Replicando...' : 'Replicar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `,
 })
@@ -147,6 +186,14 @@ export class SessionFormComponent implements OnInit {
   loading = false;
   successMessage = '';
   errorMessage = '';
+
+  // ── Replicate Modal ─────────────────────────────
+  showReplicateModal = false;
+  replicateSourceDate = '';
+  replicateTargetDate = '';
+  replicating = false;
+  replicateError = '';
+  replicateSuccess = '';
 
   ngOnInit(): void {
     this.filterDate = this.formatLocalDate(new Date());
@@ -254,6 +301,61 @@ export class SessionFormComponent implements OnInit {
       error: (err) => {
         this.loading = false;
         this.errorMessage = err.error?.error || 'Erro ao criar sessão.';
+      }
+    });
+  }
+
+  // ── Replicate ──────────────────────────────────
+
+  openReplicateModal(): void {
+    this.replicateSourceDate = this.filterDate || this.formatLocalDate(new Date());
+    this.replicateTargetDate = '';
+    this.replicateError = '';
+    this.replicateSuccess = '';
+    this.showReplicateModal = true;
+  }
+
+  closeReplicateModal(): void {
+    this.showReplicateModal = false;
+    this.replicateTargetDate = '';
+    this.replicateError = '';
+    this.replicateSuccess = '';
+  }
+
+  onReplicateSubmit(): void {
+    if (!this.replicateTargetDate || this.replicating) return;
+
+    this.replicating = true;
+    this.replicateError = '';
+    this.replicateSuccess = '';
+
+    this.adminService.replicateSessions({
+      sourceDate: this.replicateSourceDate,
+      targetDate: this.replicateTargetDate
+    }).subscribe({
+      next: (result) => {
+        this.replicating = false;
+        if (result.createdCount > 0) {
+          this.replicateSuccess = `${result.createdCount} sessão(ões) criada(s) com sucesso!`;
+        }
+        if (result.skippedCount > 0) {
+          this.replicateError = `${result.skippedCount} pulada(s): ${result.errors.join('; ')}`;
+        }
+        if (result.createdCount === 0 && result.skippedCount === 0) {
+          this.replicateError = 'Nenhuma sessão ativa encontrada no dia de origem.';
+        }
+        // Se o destino for a data atual do filtro, recarrega
+        if (this.replicateTargetDate === this.filterDate) {
+          this.loadSessions();
+        }
+        // Fecha o modal após 2s se sucesso
+        if (result.createdCount > 0 && result.skippedCount === 0) {
+          setTimeout(() => this.closeReplicateModal(), 2000);
+        }
+      },
+      error: (err) => {
+        this.replicating = false;
+        this.replicateError = err.error?.error || 'Erro ao replicar sessões.';
       }
     });
   }

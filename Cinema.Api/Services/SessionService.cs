@@ -152,6 +152,50 @@ public class SessionService : ISessionService
             session.IsDeleted);
     }
 
+    public async Task<ReplicateSessionsResult> ReplicateSessionsAsync(DateTime sourceDate, DateTime targetDate)
+    {
+        // Normaliza para UTC (date-only)
+        var sourceDay = DateTime.SpecifyKind(sourceDate.Date, DateTimeKind.Utc);
+        var targetDay = DateTime.SpecifyKind(targetDate.Date, DateTimeKind.Utc);
+
+        // Busca sessões ativas do dia de origem
+        var sourceSessions = await _repo.GetSessionsAsync(sourceDay, includeDeleted: false);
+
+        var created = new List<SessionAdminDto>();
+        var errors = new List<string>();
+
+        foreach (var session in sourceSessions)
+        {
+            // Mantém a hora/minuto, troca a data
+            var sourceTimeOfDay = session.StartTime.TimeOfDay;
+            var sourceDuration = session.EndTime - session.StartTime;
+
+            var newStart = targetDay.Add(sourceTimeOfDay);
+            var newEnd = newStart.Add(sourceDuration);
+
+            try
+            {
+                var createdSession = await CreateSessionAsync(new CreateSessionRequest(
+                    session.MovieId,
+                    session.RoomId,
+                    newStart,
+                    newEnd,
+                    session.TicketPrice
+                ));
+                created.Add(createdSession);
+            }
+            catch (DomainException ex)
+            {
+                var movieTitle = session.Movie?.Title ?? $"Filme #{session.MovieId}";
+                var roomName = session.Room?.Name ?? $"Sala #{session.RoomId}";
+                var timeLabel = $"{newStart:HH\\:mm}-{newEnd:HH\\:mm}";
+                errors.Add($"{movieTitle} na {roomName} ({timeLabel}): {ex.Message}");
+            }
+        }
+
+        return new ReplicateSessionsResult(created.Count, errors.Count, created, errors);
+    }
+
     public async Task SoftDeleteSessionAsync(int sessionId)
     {
         var session = await _repo.GetByIdAsync(sessionId)

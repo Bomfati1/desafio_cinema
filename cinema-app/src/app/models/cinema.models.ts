@@ -124,6 +124,18 @@ export interface CreateSessionRequest {
   ticketPrice: number;
 }
 
+export interface ReplicateSessionsRequest {
+  sourceDate: string;  // YYYY-MM-DD
+  targetDate: string;  // YYYY-MM-DD
+}
+
+export interface ReplicateSessionsResult {
+  createdCount: number;
+  skippedCount: number;
+  createdSessions: Session[];
+  errors: string[];
+}
+
 // ── Error Response (backend) ──────────────────────────
 
 export interface ApiError {

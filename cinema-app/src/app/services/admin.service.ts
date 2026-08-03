@@ -10,6 +10,8 @@ import {
   CreateMovieRequest,
   CreateRoomRequest,
   CreateSessionRequest,
+  ReplicateSessionsRequest,
+  ReplicateSessionsResult,
   PagedResult,
 } from '../models/cinema.models';
 
@@ -77,5 +79,9 @@ export class AdminService {
 
   getSessionSeats(sessionId: number): Observable<AdminSeat[]> {
     return this.http.get<AdminSeat[]>(`${this.baseUrl}/sessions/${sessionId}/seats`);
+  }
+
+  replicateSessions(request: ReplicateSessionsRequest): Observable<ReplicateSessionsResult> {
+    return this.http.post<ReplicateSessionsResult>(`${this.baseUrl}/sessions/replicate`, request);
   }
 }
