@@ -99,7 +99,68 @@ Cors__Origins=http://localhost:4200
 >
 > O `Program.cs` já carrega User Secrets automaticamente em desenvolvimento (`builder.Configuration.AddUserSecrets<Program>()`).
 
-### 2. Rodar Backend (.NET 8 Web API)
+### 2. (Alternativa) Restaurar Banco via Script SQL
+
+Se você quiser pular as migrations e já ter o banco populado com dados de exemplo, use o script `db-cinema.sql` incluído no repositório. Ele contém um dump completo do banco: estrutura das tabelas, índices, constraints e dados de seed (filmes, salas, assentos, sessões, usuários, etc.).
+
+O arquivo está no formato custom do **pg_dump**, portanto a restauração deve ser feita com a ferramenta **pg_restore** (não com psql).
+
+#### Requisitos
+
+- PostgreSQL 16+ instalado e rodando
+- Acesso de superusuário (ou usuário com permissão `CREATE DATABASE`)
+
+#### Passo a passo
+
+**1. Crie um banco de dados novo no PostgreSQL**
+
+```bash
+# Conecte-se ao PostgreSQL como administrador
+psql -U postgres
+
+# Crie o banco de dados (substitua "cinema_db" se preferir outro nome)
+CREATE DATABASE cinema_db;
+\q
+```
+
+Alternativamente, você pode criar pelo terminal sem entrar no psql:
+
+```bash
+createdb -U postgres cinema_db
+```
+
+**2. Restaure o dump com pg_restore**
+
+```bash
+pg_restore -U postgres -d cinema_db -v db-cinema.sql
+```
+
+| Flag | Descrição |
+|------|-----------|
+| `-U postgres` | Usuário do PostgreSQL (ajuste conforme seu ambiente) |
+| `-d cinema_db` | Banco de destino (deve existir — criado no passo 1) |
+| `-v` | Modo verboso (mostra o progresso da restauração) |
+
+**3. Verifique se as tabelas foram criadas**
+
+```bash
+psql -U postgres -d cinema_db -c "\dt"
+```
+
+Você deve ver 8 tabelas: `Movies`, `Rooms`, `Seats`, `Sessions`, `Reservations`, `Tickets`, `Users`, `RefreshTokens`.
+
+#### ⚠️ Importante
+
+- Certifique-se de que a **connection string** no `.env` aponte para o banco recém-criado:
+  ```
+  ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=cinema_db;Username=postgres;Password=sua_senha
+  ```
+- Se a API for iniciada com `dotnet run`, as migrations **não serão reaplicadas** se o banco já estiver populado (o EF Core verifica a tabela `__EFMigrationsHistory`).
+- Caso queira usar **outro nome de banco** ou porta, lembre-se de ajustar também a connection string no `.env`.
+
+---
+
+### 3. Rodar Backend (.NET 8 Web API)
 
 ```bash
 cd Cinema.Api
@@ -113,7 +174,7 @@ dotnet run
 - Swagger: `http://localhost:5125/swagger` (abre automaticamente)
 - Health check: `http://localhost:5125/health`
 
-### 3. Rodar Frontend (Angular 18)
+### 4. Rodar Frontend (Angular 18)
 
 ```bash
 cd cinema-app
@@ -127,7 +188,7 @@ npx ng serve
 
 - Frontend: `http://localhost:4200`
 
-### 4. Rodar Testes
+### 5. Rodar Testes
 
 #### Backend (.NET 8 + xUnit)
 
