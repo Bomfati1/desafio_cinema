@@ -8,6 +8,7 @@ namespace Cinema.Api.Services;
 public interface IMovieService
 {
     Task<MovieDto> CreateMovieAsync(CreateMovieRequest request);
+    Task<MovieDto> UpdateMovieAsync(int movieId, CreateMovieRequest request);
     Task<List<MovieDto>> GetAllMoviesAsync();
     Task DeleteMovieAsync(int movieId);
 }
@@ -30,6 +31,21 @@ public class MovieService : IMovieService
         };
 
         await _repo.AddAsync(movie);
+        return MapToDto(movie);
+    }
+
+    public async Task<MovieDto> UpdateMovieAsync(int movieId, CreateMovieRequest request)
+    {
+        var movie = await _repo.GetByIdAsync(movieId)
+            ?? throw new MovieNotFoundException(movieId);
+
+        movie.Title = request.Title;
+        movie.Description = request.Description;
+        movie.Genre = request.Genre;
+        movie.DurationMinutes = request.DurationMinutes;
+        movie.PosterUrl = request.PosterUrl;
+
+        await _repo.UpdateAsync(movie);
         return MapToDto(movie);
     }
 

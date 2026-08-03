@@ -54,6 +54,27 @@ public class AdminMoviesController : ControllerBase
     }
 
     /// <summary>
+    /// Atualiza os dados de um filme existente.
+    /// </summary>
+    /// <param name="id">ID do filme.</param>
+    /// <response code="200">Filme atualizado com sucesso.</response>
+    /// <response code="400">Dados inválidos.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Acesso negado (requer perfil Admin).</response>
+    /// <response code="404">Filme não encontrado.</response>
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(typeof(MovieDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<MovieDto>> Update(int id, [FromBody] CreateMovieRequest request)
+    {
+        var movie = await _movieService.UpdateMovieAsync(id, request);
+        return Ok(movie);
+    }
+
+    /// <summary>
     /// Exclui permanentemente um filme e todas as suas sessões associadas (hard delete).
     /// </summary>
     /// <param name="id">ID do filme.</param>

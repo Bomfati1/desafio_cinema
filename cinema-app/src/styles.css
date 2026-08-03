@@ -95,6 +95,18 @@ tr:hover td { background: #fafafa; }
 }
 .btn-danger:hover { background: #ffebee; border-color: #c62828; }
 
+.btn-edit {
+  background: transparent;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  transition: all 0.15s;
+  margin-right: 0.25rem;
+}
+.btn-edit:hover { background: #e3f2fd; border-color: #1565c0; }
+
 /* ── Forms ───────────────────────────────── */
 .form-group { margin-bottom: 1rem; flex: 1; }
 .form-row { display: flex; gap: 1rem; flex-wrap: wrap; }

@@ -5,7 +5,7 @@ import { DatePipe, DecimalPipe, KeyValuePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../../services/admin.service';
 import { ToastService } from '../../../services/toast.service';
-import { Movie, Room, Session, PagedResult } from '../../../models/cinema.models';
+import { Movie, Room, Session } from '../../../models/cinema.models';
 
 @Component({
   selector: 'app-session-form',
@@ -37,11 +37,11 @@ import { Movie, Room, Session, PagedResult } from '../../../models/cinema.models
               <h3 style="color:#1a1a2e;font-size:1rem;margin-bottom:0.5rem;padding-bottom:0.35rem;border-bottom:2px solid #e94560">📍 {{ entry.key }}</h3>
               <div class="table-wrapper">
                 <table>
-                  <thead><tr><th>ID</th><th>Filme</th><th>Início</th><th>Fim</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead>
+                  <thead><tr><th>Filme</th><th>Início</th><th>Fim</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead>
                   <tbody>
                     @for (s of entry.value; track s.id) {
                       <tr [class.deleted-row]="s.isDeleted">
-                        <td>{{ s.id }}</td><td><strong>{{ s.movie?.title }}</strong></td>
+                        <td><strong>{{ s.movie?.title }}</strong></td>
                         <td>{{ s.startTime | date:'dd/MM/yyyy HH:mm' }}</td>
                         <td>{{ s.endTime | date:'HH:mm' }}</td>
                         <td>R$ {{ s.ticketPrice | number:'1.2-2' }}</td>

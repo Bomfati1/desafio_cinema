@@ -3,6 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { CinemaService } from '../../services/cinema.service';
+import { AuthService } from '../../services/auth.service';
 import { Seat, SessionDetail } from '../../models/cinema.models';
 
 @Component({
@@ -13,7 +14,14 @@ import { Seat, SessionDetail } from '../../models/cinema.models';
     <div class="booking-container">
       <a routerLink="/" class="back-link">← Voltar para sessões</a>
 
-      @if (loading) {
+      @if (isAdmin) {
+        <div class="admin-block">
+          <h2>🚫 Acesso Restrito</h2>
+          <p>Administradores não podem reservar assentos. Esta funcionalidade é exclusiva para usuários com perfil <strong>User</strong>.</p>
+          <p>Para testar, faça login como:</p>
+          <code>user&#64;email.com</code> / <code>user</code>
+        </div>
+      } @else if (loading) {
         <p class="loading">Carregando mapa de assentos...</p>
       } @else if (error) {
         <p class="error">{{ error }}</p>
@@ -302,11 +310,39 @@ import { Seat, SessionDetail } from '../../models/cinema.models';
     }
 
     .error { color: #d32f2f; }
+
+    .admin-block {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      background: #fff;
+      border-radius: 12px;
+      border: 2px solid #e94560;
+      margin-top: 2rem;
+    }
+
+    .admin-block h2 {
+      color: #c62828;
+      margin-bottom: 1rem;
+    }
+
+    .admin-block p {
+      color: #555;
+      margin: 0.5rem 0;
+      line-height: 1.5;
+    }
+
+    .admin-block code {
+      background: #f5f5f5;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
   `]
 })
 export class BookingComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private cinemaService = inject(CinemaService);
+  private authService = inject(AuthService);
   private fb = inject(FormBuilder);
 
   session: SessionDetail | null = null;
@@ -317,12 +353,18 @@ export class BookingComponent implements OnInit {
   error = '';
   submitError = '';
   submitSuccess = '';
+  isAdmin = this.authService.isAdmin();
 
   form = this.fb.group({
     customerName: ['', Validators.required]
   });
 
   ngOnInit(): void {
+    if (this.isAdmin) {
+      this.loading = false;
+      return;
+    }
+
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!id) {
       this.error = 'Sessão não encontrada.';

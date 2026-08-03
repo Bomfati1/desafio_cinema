@@ -1,33 +1,49 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe, KeyValuePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { CinemaService } from '../../services/cinema.service';
-import { Session, PagedResult } from '../../models/cinema.models';
+import { AuthService } from '../../services/auth.service';
+import { Session } from '../../models/cinema.models';
 
 @Component({
   selector: 'app-session-list',
   standalone: true,
-  imports: [RouterLink, DatePipe, DecimalPipe, KeyValuePipe, FormsModule],
+  imports: [RouterLink, DatePipe, DecimalPipe, KeyValuePipe],
   template: `
     <div class="sessions-container">
       <h1>🎬 Cinema - Sessões Disponíveis</h1>
 
-      <!-- ── Filtro por data ───────────────────────── -->
-      <div class="filter-bar">
-        <label for="filterDate">📅 Data:</label>
-        <input
-          id="filterDate"
-          type="date"
-          [ngModel]="selectedDate"
-          (ngModelChange)="onDateChange($event)"
-        />
-        <label class="toggle-past">
-          <input type="checkbox" [ngModel]="showPast" (ngModelChange)="onShowPastChange($event)" />
-          Mostrar sessões passadas
-        </label>
-        @if (selectedDate) {
-          <button class="btn-clear" (click)="clearFilter()">Limpar filtro</button>
+      <!-- ── Navegação de dias (7 dias) ──────────── -->
+      <div class="day-strip-wrapper">
+        <div class="day-strip">
+          @for (day of days; track day.date) {
+            <button
+              class="day-chip"
+              [class.day-active]="day.date === selectedDate"
+              [class.day-today]="day.isToday"
+              (click)="onDaySelect(day.date)">
+              <span class="day-name">{{ day.label }}</span>
+              <span class="day-num">{{ day.day }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- ── Filtros de gênero ────────────────────── -->
+      <div class="genre-filters">
+        <button
+          class="genre-chip"
+          [class.genre-active]="!selectedGenre"
+          (click)="onGenreSelect(null)">
+          🎬 Todos
+        </button>
+        @for (genre of availableGenres; track genre) {
+          <button
+            class="genre-chip"
+            [class.genre-active]="genre === selectedGenre"
+            (click)="onGenreSelect(genre)">
+            {{ genre }}
+          </button>
         }
       </div>
 
@@ -36,7 +52,7 @@ import { Session, PagedResult } from '../../models/cinema.models';
       } @else if (error) {
         <p class="error">{{ error }}</p>
       } @else if (groupedByRoom.size === 0) {
-        <p class="empty">Nenhuma sessão disponível{{ selectedDate ? ' nesta data' : '' }}.</p>
+        <p class="empty">Nenhuma sessão disponível nesta data.</p>
       } @else {
         <!-- Agrupado por sala -->
         @for (entry of groupedByRoom | keyvalue; track entry.key) {
@@ -62,13 +78,16 @@ import { Session, PagedResult } from '../../models/cinema.models';
                   </div>
                   <div class="session-info">
                     <p class="time">
-                      🕐 {{ session.startTime | date:'dd/MM/yyyy HH:mm' }} - {{ session.endTime | date:'HH:mm' }}
+                      🕐 {{ session.startTime | date:'HH:mm' }} - {{ session.endTime | date:'HH:mm' }}
                     </p>
                     <p class="price">💵 R$ {{ session.ticketPrice | number:'1.2-2' }}</p>
                   </div>
-                  <a [routerLink]="['/booking', session.id]" class="btn-reserve">
-                    Reservar Assentos
-                  </a>
+                  <button class="btn-synopsis" (click)="openSynopsis(session)">📖 Sinopse</button>
+                  @if (!isAdmin) {
+                    <a [routerLink]="['/booking', session.id]" class="btn-reserve">
+                      Reservar Assentos
+                    </a>
+                  }
                 </div>
               }
             </div>
@@ -97,6 +116,24 @@ import { Session, PagedResult } from '../../models/cinema.models';
           </button>
         </div>
       }
+
+      <!-- Synopsis Modal -->
+      @if (selectedSynopsis) {
+        <div class="synopsis-backdrop" (click)="closeSynopsis()">
+          <div class="synopsis-dialog" (click)="$event.stopPropagation()">
+            <h2>{{ selectedSynopsis.movie?.title }}</h2>
+            @if (selectedSynopsis.movie?.genre) {
+              <span class="genre">{{ selectedSynopsis.movie?.genre }}</span>
+            }
+            @if (selectedSynopsis.movie?.durationMinutes) {
+              <span style="color:#666;font-size:0.85rem;margin-left:0.5rem">{{ selectedSynopsis.movie?.durationMinutes }} min</span>
+            }
+            <hr style="margin:1rem 0;border:none;border-top:1px solid #eee" />
+            <p class="synopsis-text">{{ selectedSynopsis.movie?.description || 'Sinopse não disponível.' }}</p>
+            <button class="btn-close-synopsis" (click)="closeSynopsis()">Fechar</button>
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -113,60 +150,126 @@ import { Session, PagedResult } from '../../models/cinema.models';
       color: #1a1a2e;
     }
 
-    .filter-bar {
+    /* ── Day Navigation Strip ──────────── */
+    .day-strip-wrapper {
+      overflow-x: auto;
+      margin-bottom: 1rem;
+      scrollbar-width: thin;
+      scrollbar-color: #e94560 transparent;
+    }
+
+    .day-strip-wrapper::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .day-strip-wrapper::-webkit-scrollbar-thumb {
+      background: #e94560;
+      border-radius: 2px;
+    }
+
+    .day-strip {
       display: flex;
-      align-items: center;
       justify-content: center;
-      gap: 0.75rem;
-      margin-bottom: 2rem;
+      gap: 0.5rem;
+      min-width: fit-content;
     }
 
-    .filter-bar label {
-      font-weight: 600;
-      color: #333;
-      font-size: 0.95rem;
-    }
-
-    .filter-bar input[type="date"] {
-      padding: 0.5rem 0.75rem;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      font-family: inherit;
-    }
-
-    .filter-bar input:focus {
-      outline: none;
-      border-color: #1a1a2e;
-      box-shadow: 0 0 0 3px rgba(26,26,46,0.1);
-    }
-
-    .btn-clear {
-      padding: 0.4rem 0.8rem;
-      background: #f5f5f5;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      color: #666;
-      transition: background 0.15s;
-    }
-
-    .btn-clear:hover { background: #e0e0e0; }
-
-    .toggle-past {
+    .day-chip {
+      flex: 0 0 auto;
+      min-width: 56px;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 0.35rem;
-      font-size: 0.85rem;
+      gap: 0.15rem;
+      padding: 0.55rem 0.5rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+
+    .day-chip:hover {
+      border-color: #e94560;
+    }
+
+    .day-chip.day-active {
+      background: #e94560;
+      border-color: #e94560;
+      color: #fff;
+    }
+
+    .day-name {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .day-num {
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .day-today .day-name {
+      color: inherit;
+    }
+
+    .day-today:not(.day-active) {
+      border-color: #e94560;
+    }
+
+    .day-today:not(.day-active)::after {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #e94560;
+      margin-top: 1px;
+    }
+
+    .day-active.day-today::after {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #fff;
+      margin-top: 1px;
+    }
+
+    /* ── Genre Filter Chips ───────────── */
+    .genre-filters {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .genre-chip {
+      padding: 0.4rem 1rem;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      font-size: 0.82rem;
       color: #555;
       cursor: pointer;
-      user-select: none;
+      font-family: inherit;
+      transition: all 0.15s ease;
     }
 
-    .toggle-past input[type="checkbox"] {
-      cursor: pointer;
-      accent-color: #e94560;
+    .genre-chip:hover {
+      border-color: #e94560;
+      color: #e94560;
+    }
+
+    .genre-chip.genre-active {
+      background: #1a1a2e;
+      border-color: #1a1a2e;
+      color: #fff;
+      font-weight: 600;
     }
 
     .room-section { margin-bottom: 2.5rem; }
@@ -306,17 +409,93 @@ import { Session, PagedResult } from '../../models/cinema.models';
       color: #999;
       font-size: 0.8rem;
     }
+
+    .btn-synopsis {
+      padding: 0.4rem;
+      background: transparent;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #555;
+      transition: all 0.15s;
+    }
+
+    .btn-synopsis:hover {
+      background: #f5f0ff;
+      border-color: #7c4dff;
+      color: #7c4dff;
+    }
+
+    .synopsis-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fade-in 0.15s ease-out;
+    }
+
+    .synopsis-dialog {
+      background: #fff;
+      border-radius: 14px;
+      padding: 2rem;
+      max-width: 520px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+
+    .synopsis-dialog h2 {
+      margin: 0 0 0.5rem 0;
+      color: #1a1a2e;
+    }
+
+    .synopsis-text {
+      color: #444;
+      line-height: 1.7;
+      font-size: 0.95rem;
+    }
+
+    .btn-close-synopsis {
+      display: block;
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: 0.6rem;
+      background: #1a1a2e;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-close-synopsis:hover { background: #e94560; }
+
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
   `]
 })
 export class SessionListComponent implements OnInit {
   private cinemaService = inject(CinemaService);
+  private authService = inject(AuthService);
 
+  isAdmin = this.authService.isAdmin();
   sessions: Session[] = [];
   groupedByRoom = new Map<string, Session[]>();
   loading = true;
   error = '';
   selectedDate = '';
-  showPast = false;
+  selectedGenre: string | null = null;
+  selectedSynopsis: Session | null = null;
+  days: Array<{ date: string; label: string; day: number; isToday: boolean }> = [];
 
   // Pagination state
   currentPage = 1;
@@ -328,6 +507,7 @@ export class SessionListComponent implements OnInit {
   get hasNextPage(): boolean { return this.currentPage < this.totalPages; }
 
   ngOnInit(): void {
+    this.generateDays();
     this.selectedDate = this.formatLocalDate(new Date());
     this.loadSessions();
   }
@@ -339,26 +519,46 @@ export class SessionListComponent implements OnInit {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  onDateChange(date: string): void {
+  private WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  private generateDays(): void {
+    const today = new Date();
+    this.days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      return {
+        date: this.formatLocalDate(d),
+        label: this.WEEKDAYS[d.getDay()],
+        day: d.getDate(),
+        isToday: i === 0
+      };
+    });
+  }
+
+  get availableGenres(): string[] {
+    const genres = this.sessions
+      .map(s => s.movie?.genre)
+      .filter((g): g is string => !!g);
+    return [...new Set(genres)].sort();
+  }
+
+  onDaySelect(date: string): void {
+    if (date === this.selectedDate) return;
     this.selectedDate = date;
     this.currentPage = 1;
     this.loadSessions();
   }
 
-  onShowPastChange(show: boolean): void {
-    this.showPast = show;
+  onGenreSelect(genre: string | null): void {
+    if (genre === this.selectedGenre) return;
+    this.selectedGenre = genre;
+    this.currentPage = 1;
     this.applyFiltersAndGroup();
   }
 
   goToPage(page: number): void {
     if (page < 1 || page > this.totalPages || page === this.currentPage) return;
     this.currentPage = page;
-    this.loadSessions();
-  }
-
-  clearFilter(): void {
-    this.selectedDate = '';
-    this.currentPage = 1;
     this.loadSessions();
   }
 
@@ -388,12 +588,9 @@ export class SessionListComponent implements OnInit {
 
   private applyFiltersAndGroup(): void {
     let filtered = this.sessions;
-
-    if (!this.showPast) {
-      const now = new Date();
-      filtered = filtered.filter(s => new Date(s.endTime) > now);
+    if (this.selectedGenre) {
+      filtered = filtered.filter(s => s.movie?.genre === this.selectedGenre);
     }
-
     this.groupByRoom(filtered);
   }
 
@@ -407,6 +604,14 @@ export class SessionListComponent implements OnInit {
       map.get(roomName)!.push(s);
     }
     this.groupedByRoom = map;
+  }
+
+  openSynopsis(session: Session): void {
+    this.selectedSynopsis = session;
+  }
+
+  closeSynopsis(): void {
+    this.selectedSynopsis = null;
   }
 
   onPosterError(event: Event): void {

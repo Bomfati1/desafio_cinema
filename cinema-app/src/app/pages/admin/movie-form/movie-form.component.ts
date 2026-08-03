@@ -20,17 +20,19 @@ import { Movie } from '../../../models/cinema.models';
           <div class="table-wrapper">
             <table>
               <thead>
-                <tr><th>ID</th><th>Título</th><th>Gênero</th><th>Duração</th><th>Poster</th><th>Ações</th></tr>
+                <tr><th>Título</th><th>Gênero</th><th>Duração</th><th>Poster</th><th>Ações</th></tr>
               </thead>
               <tbody>
                 @for (movie of movies; track movie.id) {
                   <tr>
-                    <td>{{ movie.id }}</td>
                     <td><strong>{{ movie.title }}</strong></td>
                     <td>{{ movie.genre }}</td>
                     <td>{{ movie.durationMinutes }} min</td>
                     <td>@if (movie.posterUrl) { <a [href]="movie.posterUrl" target="_blank">🔗</a> } @else { — }</td>
-                    <td><button class="btn-danger" (click)="deleteMovie(movie)">🗑</button></td>
+                    <td>
+                      <button class="btn-edit" (click)="startEdit(movie)">✏️</button>
+                      <button class="btn-danger" (click)="deleteMovie(movie)">🗑</button>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -41,7 +43,10 @@ import { Movie } from '../../../models/cinema.models';
 
       <!-- ── Formulário ─────────────────────────── -->
       <section class="section-card max-800">
-        <h2>➕ Cadastrar Novo Filme</h2>
+        <h2>{{ editingMovie ? '✏️ Editar Filme' : '➕ Cadastrar Novo Filme' }}</h2>
+        @if (editingMovie) {
+          <p style="color:#888;font-size:0.85rem;margin-bottom:0.5rem">Editando: <strong>{{ editingMovie.title }}</strong></p>
+        }
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
           <div class="form-row">
             <div class="form-group flex-2">
@@ -67,9 +72,14 @@ import { Movie } from '../../../models/cinema.models';
           </div>
           @if (successMessage) { <p class="status-success">{{ successMessage }}</p> }
           @if (errorMessage) { <p class="status-error">{{ errorMessage }}</p> }
-          <button type="submit" class="btn-primary" [disabled]="form.invalid || loading">
-            {{ loading ? 'Salvando...' : 'Cadastrar Filme' }}
-          </button>
+          <div style="display:flex;gap:0.75rem">
+            <button type="submit" class="btn-primary" [disabled]="form.invalid || loading">
+              {{ loading ? 'Salvando...' : (editingMovie ? 'Atualizar Filme' : 'Cadastrar Filme') }}
+            </button>
+            @if (editingMovie) {
+              <button type="button" class="btn-cancel" (click)="cancelEdit()">Cancelar</button>
+            }
+          </div>
         </form>
       </section>
     </div>
@@ -83,6 +93,7 @@ export class MovieFormComponent implements OnInit {
   movies: Movie[] = [];
   loadingList = true;
   listError = '';
+  editingMovie: Movie | null = null;
 
   form = this.fb.group({
     title: ['', Validators.required],
@@ -113,24 +124,52 @@ export class MovieFormComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.adminService.createMovie({
+    const request = {
       title: this.form.value.title!,
       description: this.form.value.description ?? '',
       genre: this.form.value.genre ?? '',
       durationMinutes: this.form.value.durationMinutes!,
       posterUrl: this.form.value.posterUrl ?? ''
-    }).subscribe({
+    };
+
+    const action = this.editingMovie
+      ? this.adminService.updateMovie(this.editingMovie.id, request)
+      : this.adminService.createMovie(request);
+
+    action.subscribe({
       next: (movie) => {
         this.loading = false;
-        this.successMessage = `Filme "${movie.title}" cadastrado!`;
+        const verb = this.editingMovie ? 'atualizado' : 'cadastrado';
+        this.successMessage = `Filme "${movie.title}" ${verb}!`;
         this.form.reset({ title: '', description: '', genre: '', durationMinutes: 120, posterUrl: '' });
+        this.editingMovie = null;
         this.loadMovies();
       },
       error: () => {
         this.loading = false;
-        this.errorMessage = 'Erro ao cadastrar filme.';
+        this.errorMessage = this.editingMovie ? 'Erro ao atualizar filme.' : 'Erro ao cadastrar filme.';
       }
     });
+  }
+
+  startEdit(movie: Movie): void {
+    this.editingMovie = movie;
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.form.setValue({
+      title: movie.title,
+      description: movie.description,
+      genre: movie.genre,
+      durationMinutes: movie.durationMinutes,
+      posterUrl: movie.posterUrl
+    });
+  }
+
+  cancelEdit(): void {
+    this.editingMovie = null;
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.form.reset({ title: '', description: '', genre: '', durationMinutes: 120, posterUrl: '' });
   }
 
   async deleteMovie(movie: Movie): Promise<void> {

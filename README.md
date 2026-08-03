@@ -286,6 +286,7 @@ Dois usuários são criados automaticamente na primeira execução:
 |--------|------|-----------|
 | `GET` | `/api/admin/movies` | Lista todos os filmes |
 | `POST` | `/api/admin/movies` | Cadastra novo filme |
+| `PUT` | `/api/admin/movies/{id}` | Atualiza dados de um filme |
 | `DELETE` | `/api/admin/movies/{id}` | Exclui filme e suas sessões (hard delete) |
 
 **POST /api/admin/movies**
@@ -390,11 +391,11 @@ Dois usuários são criados automaticamente na primeira execução:
 
 | Rota | Componente | Acesso |
 |------|-----------|--------|
-| `/` | `SessionListComponent` | Público — lista de sessões |
+| `/` | `SessionListComponent` | Público — sessões com navegação por 7 dias, filtros de gênero e sinopse |
 | `/login` | `LoginComponent` | Público — login |
-| `/booking/:id` | `BookingComponent` | Auth — reserva de assentos |
-| `/admin` | `AdminDashboardComponent` | Admin — dashboard |
-| `/admin/movies` | `MovieFormComponent` | Admin — CRUD filmes |
+| `/booking/:id` | `BookingComponent` | Apenas User — reserva de assentos (bloqueado para Admin) |
+| `/admin` | `AdminDashboardComponent` | Admin — dashboard com layout responsivo |
+| `/admin/movies` | `MovieFormComponent` | Admin — CRUD filmes com edição inline |
 | `/admin/rooms` | `RoomFormComponent` | Admin — CRUD salas |
 | `/admin/sessions` | `SessionFormComponent` | Admin — CRUD sessões |
 | `/admin/sessions/:id/seats` | `AdminSessionSeatsComponent` | Admin — mapa de assentos com dados de reserva |
@@ -599,14 +600,16 @@ desafio/
 
 ---
 
-## 📦 Dados de Seed
+## 🎨 Funcionalidades da Interface
 
-O banco é populado automaticamente na primeira execução:
+### Página de Sessões
+- **Navegação por dias**: Tira horizontal rolável com 7 dias a partir de hoje — cada dia exibe nome do dia da semana + número, com o dia atual destacado
+- **Filtros de gênero**: Chips dinâmicos extraídos das sessões carregadas (Ação, Drama, Ficção, etc.) — filtro instantâneo sem recarregar
+- **Sinopse**: Botão 📖 em cada card que abre modal com a descrição completa do filme
+- **Horários**: Cards mostram apenas horário (HH:mm), já que a data está na tira de navegação
+- **Reserva**: Botão "Reservar Assentos" visível apenas para usuários com perfil User
 
-| Entidade | Dados |
-|----------|-------|
-| **Movies** | Oppenheimer (180 min), Duna: Parte 2 (166 min) |
-| **Rooms** | Sala 1 (5 fileiras × 4 colunas = 20 assentos) |
-| **Seats** | 20 assentos gerados (A1–A4, B1–B4, …, E1–E4) |
-| **Sessions** | 4 sessões no dia 2026-08-01 (14h, 19h, 15h, 20h) |
-| **Users** | Admin + User (senhas hasheadas com BCrypt) |
+### Painel Admin
+- **Layout responsivo**: Em desktop, sidebar lateral de 250px; em mobile (≤768px), topbar compacta com menu hamburger que desliza como overlay
+- **Edição de filmes**: Botão ✏️ na tabela que pré-preenche o formulário para edição, com botão Cancelar para sair do modo de edição
+- **Tabelas simplificadas**: Colunas de ID removidas das tabelas de filmes, salas e sessões

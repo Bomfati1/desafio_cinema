@@ -106,6 +106,69 @@ import { ToastContainerComponent } from './components/toast-container.component'
     main {
       min-height: calc(100vh - 52px);
     }
+
+    /* ═══════════════════════════════════════
+       Mobile Responsiveness
+       ═══════════════════════════════════════ */
+    @media (max-width: 600px) {
+      .navbar {
+        padding: 0.6rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .logo {
+        font-size: 1.1rem;
+      }
+
+      .nav-links {
+        gap: 0.75rem;
+        font-size: 0.85rem;
+      }
+
+      .nav-links a {
+        font-size: 0.85rem;
+      }
+
+      .user-greeting {
+        display: none;
+      }
+
+      .btn-nav {
+        padding: 0.3rem 0.7rem;
+        font-size: 0.8rem;
+      }
+
+      .btn-login-link {
+        padding: 0.3rem 0.7rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .navbar {
+        padding: 0.5rem 0.75rem;
+        gap: 0.4rem;
+      }
+
+      .logo {
+        font-size: 1rem;
+      }
+
+      .nav-links {
+        gap: 0.5rem;
+        font-size: 0.8rem;
+      }
+
+      .nav-links a {
+        font-size: 0.8rem;
+      }
+
+      .btn-nav, .btn-login-link {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+      }
+    }
   `],
 })
 export class AppComponent {

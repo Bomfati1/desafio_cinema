@@ -27,6 +27,10 @@ export class AdminService {
     return this.http.post<Movie>(`${this.baseUrl}/movies`, request);
   }
 
+  updateMovie(id: number, request: CreateMovieRequest): Observable<Movie> {
+    return this.http.put<Movie>(`${this.baseUrl}/movies/${id}`, request);
+  }
+
   deleteMovie(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/movies/${id}`);
   }

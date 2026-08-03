@@ -18,11 +18,11 @@ import { Room } from '../../../models/cinema.models';
         @else {
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>ID</th><th>Nome</th><th>Fileiras</th><th>Colunas</th><th>Total</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Fileiras</th><th>Colunas</th><th>Total</th><th>Ações</th></tr></thead>
               <tbody>
                 @for (room of rooms; track room.id) {
                   <tr>
-                    <td>{{ room.id }}</td><td><strong>{{ room.name }}</strong></td>
+                    <td><strong>{{ room.name }}</strong></td>
                     <td>{{ room.rows }}</td><td>{{ room.columns }}</td>
                     <td>{{ room.rows * room.columns }}</td>
                     <td><button class="btn-danger" (click)="deleteRoom(room)">🗑</button></td>
