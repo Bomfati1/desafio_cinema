@@ -196,8 +196,13 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // CORS (origens separadas por virgula via env var Cors__Origins)
-var corsOrigins = (builder.Configuration["Cors:Origins"] ?? "http://localhost:4200")
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+var rawOrigins = builder.Configuration["Cors:Origins"] ?? "http://localhost:4200";
+var corsOrigins = rawOrigins
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Select(o => o.Trim('"', '[', ']', ' '))
+    .ToArray();
+
+Console.WriteLine($"[CORS] Origens configuradas: {string.Join("; ", corsOrigins)}");
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policy =>
