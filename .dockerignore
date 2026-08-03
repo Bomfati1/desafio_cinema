@@ -10,14 +10,14 @@ obj/
 .gitignore
 
 # Frontend (não faz parte da imagem do backend)
-../cinema-app/
-../cinema-app/node_modules/
+cinema-app/
+cinema-app/node_modules/
 
 # Testes
-../Cinema.Api.Tests/
+Cinema.Api.Tests/
 
 # Documentação
-../README.md
+README.md
 
 # Docker
 Dockerfile
