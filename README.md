@@ -7,32 +7,35 @@ Aplicação full-stack para gestão de cinema com autenticação JWT (access + r
 ## 🛠️ Tecnologias Utilizadas
 
 ### Backend (.NET 8 Web API)
-| Tecnologia | Versão | Descrição |
-|-----------|--------|-----------|
-| ASP.NET Core | 8.0 | Web API REST |
-| Entity Framework Core | 8.0.14 | ORM + Migrations |
-| PostgreSQL (Npgsql) | 8.0.11 | Banco de dados relacional |
-| JWT Bearer | 8.0.14 | Autenticação stateless |
-| BCrypt.Net-Next | 4.0.3 | Hash de senhas |
-| FluentValidation | 11.3.0 | Validação de DTOs |
-| Swashbuckle (Swagger) | 6.6.2 | Documentação OpenAPI |
-| ProblemDetails (RFC 7807) | — | Padronização de erros |
-| Health Checks | — | Monitoramento `/health` |
-| CORS | — | Política para Angular local |
+
+| Tecnologia                | Versão | Descrição                   |
+| ------------------------- | ------ | --------------------------- |
+| ASP.NET Core              | 8.0    | Web API REST                |
+| Entity Framework Core     | 8.0.14 | ORM + Migrations            |
+| PostgreSQL (Npgsql)       | 8.0.11 | Banco de dados relacional   |
+| JWT Bearer                | 8.0.14 | Autenticação stateless      |
+| BCrypt.Net-Next           | 4.0.3  | Hash de senhas              |
+| FluentValidation          | 11.3.0 | Validação de DTOs           |
+| Swashbuckle (Swagger)     | 6.6.2  | Documentação OpenAPI        |
+| ProblemDetails (RFC 7807) | —      | Padronização de erros       |
+| Health Checks             | —      | Monitoramento `/health`     |
+| CORS                      | —      | Política para Angular local |
 
 ### Frontend (Angular 18)
-| Tecnologia | Versão | Descrição |
-|-----------|--------|-----------|
-| Angular | 18.2 | Framework SPA |
-| TypeScript | 5.5 | Linguagem tipada |
-| RxJS | 7.8 | Programação reativa |
-| Standalone Components | — | Arquitetura sem NgModules |
-| Reactive Forms | — | Formulários reativos |
-| Lazy Loading | — | Carregamento sob demanda |
-| Route Guards | — | Proteção de rotas (auth/admin) |
-| HTTP Interceptors | — | Injeção de token JWT + refresh automático |
+
+| Tecnologia            | Versão | Descrição                                 |
+| --------------------- | ------ | ----------------------------------------- |
+| Angular               | 18.2   | Framework SPA                             |
+| TypeScript            | 5.5    | Linguagem tipada                          |
+| RxJS                  | 7.8    | Programação reativa                       |
+| Standalone Components | —      | Arquitetura sem NgModules                 |
+| Reactive Forms        | —      | Formulários reativos                      |
+| Lazy Loading          | —      | Carregamento sob demanda                  |
+| Route Guards          | —      | Proteção de rotas (auth/admin)            |
+| HTTP Interceptors     | —      | Injeção de token JWT + refresh automático |
 
 ### Banco de Dados
+
 - **PostgreSQL 16+** com 8 tabelas: `Movies`, `Rooms`, `Seats`, `Sessions`, `Reservations`, `Tickets`, `Users`, `RefreshTokens`
 
 ---
@@ -40,34 +43,51 @@ Aplicação full-stack para gestão de cinema com autenticação JWT (access + r
 ## 🚀 Como Rodar
 
 ### Pré-requisitos
+
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - [Node.js 18+](https://nodejs.org/)
 - [PostgreSQL 16+](https://www.postgresql.org/download/)
 
 ### 1. Configurar Banco e JWT
 
-Crie um arquivo `appsettings.json` na pasta `Cinema.Api/`:
+Crie um arquivo `.env` na **raiz do projeto** (`desafio/.env`) copiando o exemplo:
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=cinema;Username=postgres;Password=sua_senha"
-  },
-  "Jwt": {
-    "Key": "sua-chave-secreta-com-pelo-menos-32-caracteres",
-    "Issuer": "CinemaApi",
-    "Audience": "CinemaApp"
-  },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  }
-}
+```bash
+cp .env.example .env
 ```
 
-> 💡 **Alternativa (dev):** Use [User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) para não commitar secrets:
+Edite o `.env` com suas configurações locais:
+
+```env
+# ── ASP.NET Core ──────────────────────────────────────────
+ASPNETCORE_ENVIRONMENT=Development
+
+# ── Porta da API ─────────────────────────────────────────
+PORT=5125
+
+# ── Banco de Dados (PostgreSQL Local) ─────────────────────
+ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=cinema_db;Username=postgres;Password=sua_senha
+
+# ── JWT (JSON Web Token) ─────────────────────────────────
+Jwt__Key=sua-chave-secreta-com-pelo-menos-32-caracteres
+Jwt__Issuer=CinemaApi
+Jwt__Audience=CinemaApp
+Jwt__ExpireMinutes=60
+Jwt__RefreshExpireDays=7
+
+# ── CORS ─────────────────────────────────────────────────
+Cors__Origins=http://localhost:4200
+```
+
+> 💡 **Como funciona:** O .NET lê automaticamente o `.env` como variáveis de ambiente. A convenção `__` (underscore duplo) vira `:` no `IConfiguration`:
+>
+> - `ConnectionStrings__DefaultConnection` → `builder.Configuration.GetConnectionString("DefaultConnection")`
+> - `Jwt__Key` → `builder.Configuration["Jwt:Key"]`
+>
+> O arquivo `.env` .
+
+> 💡 **Alternativa (dev):** Use [User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) em vez de `.env`:
+>
 > ```bash
 > cd Cinema.Api
 > dotnet user-secrets init
@@ -76,6 +96,8 @@ Crie um arquivo `appsettings.json` na pasta `Cinema.Api/`:
 > dotnet user-secrets set "Jwt:Issuer" "CinemaApi"
 > dotnet user-secrets set "Jwt:Audience" "CinemaApp"
 > ```
+>
+> O `Program.cs` já carrega User Secrets automaticamente em desenvolvimento (`builder.Configuration.AddUserSecrets<Program>()`).
 
 ### 2. Rodar Backend (.NET 8 Web API)
 
@@ -105,11 +127,54 @@ npx ng serve
 
 - Frontend: `http://localhost:4200`
 
+### 4. Rodar Testes
+
+#### Backend (.NET 8 + xUnit)
+
+```bash
+cd Cinema.Api.Tests
+
+# Rodar todos os testes (integração + unitários)
+dotnet test
+```
+
+Os testes usam **InMemory Database** (não precisa de PostgreSQL rodando) e cobrem:
+
+| Arquivo                                      | Tipo       | O que testa                                |
+| -------------------------------------------- | ---------- | ------------------------------------------ |
+| `Integration/SessionsControllerTests.cs`     | Integração | Listagem e detalhes de sessões             |
+| `Integration/AuthControllerTests.cs`         | Integração | Login e refresh token                      |
+| `Integration/ReservationsControllerTests.cs` | Integração | Criação de reservas e conflitos de assento |
+| `ReservationServiceTests.cs`                 | Unitário   | Regras de negócio de reservas              |
+| `SessionServiceTests.cs`                     | Unitário   | Regras de negócio de sessões               |
+| `ValidatorsTests.cs`                         | Unitário   | Validação dos DTOs com FluentValidation    |
+
+#### Frontend (Angular 18 + Jasmine/Karma)
+
+```bash
+cd cinema-app
+
+# Rodar os testes unitários (watch mode)
+npx ng test
+
+# Rodar uma vez só (sem watch, útil para CI)
+npx ng test --watch=false --browsers=ChromeHeadless
+```
+
+Os testes cobrem:
+
+| Arquivo                         | O que testa                                           |
+| ------------------------------- | ----------------------------------------------------- |
+| `services/auth.service.spec.ts` | Login, logout, localStorage, JWT parsing, getUserInfo |
+| `guards/auth.guard.spec.ts`     | Acesso permitido/redirecionamento para `/login`       |
+| `guards/admin.guard.spec.ts`    | Acesso permitido para Admin / bloqueio para User      |
+
 ---
 
 ## 🔐 Autenticação JWT
 
 O sistema implementa **JWT com refresh token rotativo**:
+
 - **Access Token**: curta duração (1h), usado nas requisições autenticadas
 - **Refresh Token**: longa duração (7 dias), armazenado no banco, rotacionado a cada uso (cada token só pode ser usado uma vez — `IsRevoked`)
 - O frontend detecta `401` e tenta renovar automaticamente via interceptor HTTP
@@ -118,24 +183,24 @@ O sistema implementa **JWT com refresh token rotativo**:
 
 Dois usuários são criados automaticamente na primeira execução:
 
-| Perfil | Email | Senha | Role |
-|--------|-------|-------|------|
+| Perfil    | Email              | Senha   | Role  |
+| --------- | ------------------ | ------- | ----- |
 | **Admin** | `admin@cinema.com` | `admin` | Admin |
-| **User** | `user@email.com` | `user` | User |
+| **User**  | `user@email.com`   | `user`  | User  |
 
 > Senhas são armazenadas com hash BCrypt (salting automático).
 
 ### Permissões por Perfil
 
-| Ação | Admin | User | Público |
-|------|:-----:|:----:|:-------:|
-| Listar sessões | ✅ | ✅ | ✅ |
-| Ver detalhes/mapa de assentos | ✅ | ✅ | ✅ |
-| Fazer reserva | ❌ | ✅ | ❌ |
-| CRUD filmes | ✅ | ❌ | ❌ |
-| CRUD salas | ✅ | ❌ | ❌ |
-| Criar/desativar/restaurar sessões | ✅ | ❌ | ❌ |
-| Ver assentos com dados de reserva | ✅ | ❌ | ❌ |
+| Ação                              | Admin | User | Público |
+| --------------------------------- | :---: | :--: | :-----: |
+| Listar sessões                    |  ✅   |  ✅  |   ✅    |
+| Ver detalhes/mapa de assentos     |  ✅   |  ✅  |   ✅    |
+| Fazer reserva                     |  ❌   |  ✅  |   ❌    |
+| CRUD filmes                       |  ✅   |  ❌  |   ❌    |
+| CRUD salas                        |  ✅   |  ❌  |   ❌    |
+| Criar/desativar/restaurar sessões |  ✅   |  ❌  |   ❌    |
+| Ver assentos com dados de reserva |  ✅   |  ❌  |   ❌    |
 
 ---
 
@@ -157,12 +222,13 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### 🔓 Autenticação (público)
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `POST` | `/api/auth/login` | Login — retorna JWT + refresh token |
+| Método | Rota                | Descrição                                 |
+| ------ | ------------------- | ----------------------------------------- |
+| `POST` | `/api/auth/login`   | Login — retorna JWT + refresh token       |
 | `POST` | `/api/auth/refresh` | Renova JWT usando refresh token (rotação) |
 
 **POST /api/auth/login**
+
 ```json
 // Request
 { "email": "admin@cinema.com", "password": "admin" }
@@ -181,6 +247,7 @@ Dois usuários são criados automaticamente na primeira execução:
 ```
 
 **POST /api/auth/refresh**
+
 ```json
 // Request
 { "refreshToken": "abc123..." }
@@ -193,12 +260,13 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### 🔓 Sessões (público)
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/sessions` | Lista sessões ativas com paginação |
-| `GET` | `/api/sessions/{id}` | Detalhes da sessão com mapa de assentos |
+| Método | Rota                 | Descrição                               |
+| ------ | -------------------- | --------------------------------------- |
+| `GET`  | `/api/sessions`      | Lista sessões ativas com paginação      |
+| `GET`  | `/api/sessions/{id}` | Detalhes da sessão com mapa de assentos |
 
 **GET /api/sessions?date=2026-08-01&page=1&pageSize=20**
+
 ```json
 // Response 200
 {
@@ -209,8 +277,15 @@ Dois usuários são criados automaticamente na primeira execução:
       "roomId": 1,
       "startTime": "2026-08-01T14:00:00Z",
       "endTime": "2026-08-01T17:00:00Z",
-      "ticketPrice": 35.00,
-      "movie": { "id": 1, "title": "Oppenheimer", "description": "...", "genre": "Drama/Biografia", "durationMinutes": 180, "posterUrl": "..." },
+      "ticketPrice": 35.0,
+      "movie": {
+        "id": 1,
+        "title": "Oppenheimer",
+        "description": "...",
+        "genre": "Drama/Biografia",
+        "durationMinutes": 180,
+        "posterUrl": "..."
+      },
       "room": { "id": 1, "name": "Sala 1", "rows": 5, "columns": 4 }
     }
   ],
@@ -224,6 +299,7 @@ Dois usuários são criados automaticamente na primeira execução:
 ```
 
 **GET /api/sessions/1**
+
 ```json
 // Response 200
 {
@@ -248,11 +324,12 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### 🔒 Reservas (requer autenticação — User ou Admin)
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
+| Método | Rota                | Descrição                |
+| ------ | ------------------- | ------------------------ |
 | `POST` | `/api/reservations` | Cria reserva de assentos |
 
 **POST /api/reservations** (Header: `Authorization: Bearer <token>`)
+
 ```json
 // Request
 {
@@ -282,14 +359,15 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### 🔒 Admin — Filmes (requer perfil Admin)
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/admin/movies` | Lista todos os filmes |
-| `POST` | `/api/admin/movies` | Cadastra novo filme |
-| `PUT` | `/api/admin/movies/{id}` | Atualiza dados de um filme |
+| Método   | Rota                     | Descrição                                 |
+| -------- | ------------------------ | ----------------------------------------- |
+| `GET`    | `/api/admin/movies`      | Lista todos os filmes                     |
+| `POST`   | `/api/admin/movies`      | Cadastra novo filme                       |
+| `PUT`    | `/api/admin/movies/{id}` | Atualiza dados de um filme                |
 | `DELETE` | `/api/admin/movies/{id}` | Exclui filme e suas sessões (hard delete) |
 
 **POST /api/admin/movies**
+
 ```json
 // Request
 {
@@ -304,6 +382,7 @@ Dois usuários são criados automaticamente na primeira execução:
 ```
 
 **DELETE /api/admin/movies/1**
+
 ```
 // Response 204 No Content
 // Response 404 — filme não encontrado
@@ -313,13 +392,14 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### 🔒 Admin — Salas (requer perfil Admin)
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/admin/rooms` | Lista todas as salas |
-| `POST` | `/api/admin/rooms` | Cria sala com geração automática de assentos |
+| Método   | Rota                    | Descrição                                     |
+| -------- | ----------------------- | --------------------------------------------- |
+| `GET`    | `/api/admin/rooms`      | Lista todas as salas                          |
+| `POST`   | `/api/admin/rooms`      | Cria sala com geração automática de assentos  |
 | `DELETE` | `/api/admin/rooms/{id}` | Exclui sala, assentos e sessões (hard delete) |
 
 **POST /api/admin/rooms**
+
 ```json
 // Request
 { "name": "Sala VIP", "rows": 6, "columns": 5 }
@@ -331,15 +411,16 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### 🔒 Admin — Sessões (requer perfil Admin)
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/admin/sessions` | Lista todas as sessões (inclui desativadas) com paginação |
-| `GET` | `/api/admin/sessions/{id}/seats` | Mapa de assentos com nome do cliente e horário da reserva |
-| `POST` | `/api/admin/sessions` | Cria nova sessão (valida conflito de horário na mesma sala) |
-| `DELETE` | `/api/admin/sessions/{id}` | Desativa sessão (soft-delete) |
-| `POST` | `/api/admin/sessions/{id}/restore` | Restaura sessão desativada |
+| Método   | Rota                               | Descrição                                                   |
+| -------- | ---------------------------------- | ----------------------------------------------------------- |
+| `GET`    | `/api/admin/sessions`              | Lista todas as sessões (inclui desativadas) com paginação   |
+| `GET`    | `/api/admin/sessions/{id}/seats`   | Mapa de assentos com nome do cliente e horário da reserva   |
+| `POST`   | `/api/admin/sessions`              | Cria nova sessão (valida conflito de horário na mesma sala) |
+| `DELETE` | `/api/admin/sessions/{id}`         | Desativa sessão (soft-delete)                               |
+| `POST`   | `/api/admin/sessions/{id}/restore` | Restaura sessão desativada                                  |
 
 **POST /api/admin/sessions**
+
 ```json
 // Request
 {
@@ -347,7 +428,7 @@ Dois usuários são criados automaticamente na primeira execução:
   "roomId": 1,
   "startTime": "2026-08-01T14:00:00Z",
   "endTime": "2026-08-01T17:00:00Z",
-  "ticketPrice": 35.00
+  "ticketPrice": 35.0
 }
 
 // Response 201 — SessionAdminDto
@@ -356,21 +437,42 @@ Dois usuários são criados automaticamente na primeira execução:
 ```
 
 **GET /api/admin/sessions/1/seats**
+
 ```json
 // Response 200
 [
-  { "id": 1, "roomId": 1, "row": "A", "number": 1, "label": "A1", "isOccupied": true, "customerName": "João Silva", "reservedAt": "2026-08-01T10:30:00Z" },
-  { "id": 2, "roomId": 1, "row": "A", "number": 2, "label": "A2", "isOccupied": false, "customerName": null, "reservedAt": null }
+  {
+    "id": 1,
+    "roomId": 1,
+    "row": "A",
+    "number": 1,
+    "label": "A1",
+    "isOccupied": true,
+    "customerName": "João Silva",
+    "reservedAt": "2026-08-01T10:30:00Z"
+  },
+  {
+    "id": 2,
+    "roomId": 1,
+    "row": "A",
+    "number": 2,
+    "label": "A2",
+    "isOccupied": false,
+    "customerName": null,
+    "reservedAt": null
+  }
 ]
 ```
 
 **DELETE /api/admin/sessions/1**
+
 ```
 // Response 204 No Content — sessão marcada como IsDeleted=true (soft-delete)
 // Response 404 — sessão não encontrada
 ```
 
 **POST /api/admin/sessions/1/restore**
+
 ```
 // Response 204 No Content — sessão restaurada
 // Response 409 — conflito de horário com sessão ativa na mesma sala
@@ -381,24 +483,24 @@ Dois usuários são criados automaticamente na primeira execução:
 
 ### ❤️ Health Check
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/health` | Health check da API |
+| Método | Rota      | Descrição           |
+| ------ | --------- | ------------------- |
+| `GET`  | `/health` | Health check da API |
 
 ---
 
 ## 🖥️ Rotas do Frontend (Angular)
 
-| Rota | Componente | Acesso |
-|------|-----------|--------|
-| `/` | `SessionListComponent` | Público — sessões com navegação por 7 dias, filtros de gênero e sinopse |
-| `/login` | `LoginComponent` | Público — login |
-| `/booking/:id` | `BookingComponent` | Apenas User — reserva de assentos (bloqueado para Admin) |
-| `/admin` | `AdminDashboardComponent` | Admin — dashboard com layout responsivo |
-| `/admin/movies` | `MovieFormComponent` | Admin — CRUD filmes com edição inline |
-| `/admin/rooms` | `RoomFormComponent` | Admin — CRUD salas |
-| `/admin/sessions` | `SessionFormComponent` | Admin — CRUD sessões |
-| `/admin/sessions/:id/seats` | `AdminSessionSeatsComponent` | Admin — mapa de assentos com dados de reserva |
+| Rota                        | Componente                   | Acesso                                                                  |
+| --------------------------- | ---------------------------- | ----------------------------------------------------------------------- |
+| `/`                         | `SessionListComponent`       | Público — sessões com navegação por 7 dias, filtros de gênero e sinopse |
+| `/login`                    | `LoginComponent`             | Público — login                                                         |
+| `/booking/:id`              | `BookingComponent`           | Apenas User — reserva de assentos (bloqueado para Admin)                |
+| `/admin`                    | `AdminDashboardComponent`    | Admin — dashboard com layout responsivo                                 |
+| `/admin/movies`             | `MovieFormComponent`         | Admin — CRUD filmes com edição inline                                   |
+| `/admin/rooms`              | `RoomFormComponent`          | Admin — CRUD salas                                                      |
+| `/admin/sessions`           | `SessionFormComponent`       | Admin — CRUD sessões                                                    |
+| `/admin/sessions/:id/seats` | `AdminSessionSeatsComponent` | Admin — mapa de assentos com dados de reserva                           |
 
 ---
 
@@ -454,6 +556,7 @@ Dois usuários são criados automaticamente na primeira execução:
 ```
 
 **Índices e constraints:**
+
 - `Ticket(SessionId, SeatId)` — **Unique Index** (impede double-booking no banco)
 - `Seat(RoomId, Row, Number)` — **Unique Index** (assento único por sala)
 - `User(Email)` — **Unique Index** (email único)
@@ -466,14 +569,15 @@ Dois usuários são criados automaticamente na primeira execução:
 
 A API usa **ProblemDetails (RFC 7807)** para todos os erros, com middleware global (`GlobalExceptionHandler`):
 
-| Código | Situação |
-|--------|----------|
-| `400` | Erro de validação (campos obrigatórios, formato inválido) |
-| `401` | Credenciais inválidas ou token expirado |
-| `404` | Recurso não encontrado (sessão, filme, sala, assento) |
-| `409` | Conflito — assento já ocupado ou conflito de horário |
+| Código | Situação                                                  |
+| ------ | --------------------------------------------------------- |
+| `400`  | Erro de validação (campos obrigatórios, formato inválido) |
+| `401`  | Credenciais inválidas ou token expirado                   |
+| `404`  | Recurso não encontrado (sessão, filme, sala, assento)     |
+| `409`  | Conflito — assento já ocupado ou conflito de horário      |
 
 **Validação com FluentValidation:**
+
 - `LoginValidator` — email e senha obrigatórios
 - `CreateReservationValidator` — `SessionId > 0`, `CustomerName` obrigatório, `SeatIds` com mínimo 1
 - `CreateMovieValidator` — título obrigatório (1-200), `DurationMinutes > 0`
@@ -603,6 +707,7 @@ desafio/
 ## 🎨 Funcionalidades da Interface
 
 ### Página de Sessões
+
 - **Navegação por dias**: Tira horizontal rolável com 7 dias a partir de hoje — cada dia exibe nome do dia da semana + número, com o dia atual destacado
 - **Filtros de gênero**: Chips dinâmicos extraídos das sessões carregadas (Ação, Drama, Ficção, etc.) — filtro instantâneo sem recarregar
 - **Sinopse**: Botão 📖 em cada card que abre modal com a descrição completa do filme
@@ -610,6 +715,7 @@ desafio/
 - **Reserva**: Botão "Reservar Assentos" visível apenas para usuários com perfil User
 
 ### Painel Admin
+
 - **Layout responsivo**: Em desktop, sidebar lateral de 250px; em mobile (≤768px), topbar compacta com menu hamburger que desliza como overlay
 - **Edição de filmes**: Botão ✏️ na tabela que pré-preenche o formulário para edição, com botão Cancelar para sair do modo de edição
 - **Tabelas simplificadas**: Colunas de ID removidas das tabelas de filmes, salas e sessões
